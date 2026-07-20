@@ -1,0 +1,22 @@
+{
+  "name": "trendy-wardrobe-design-system",
+  "version": "1.0.0",
+  "description": "Luxury Fashion E-Commerce Design System - Module 1 Foundation",
+  "private": true,
+  "scripts": {
+    "test": "echo \"No tests specified\"",
+    "build:css": "postcss src/styles/main.css -o dist/trendy-wardrobe.css",
+    "watch:css": "postcss src/styles/main.css -o dist/trendy-wardrobe.css --watch"
+  },
+  "devDependencies": {
+    "postcss": "^8.4.31",
+    "postcss-cli": "^10.1.0",
+    "postcss-import": "^15.1.0",
+    "autoprefixer": "^10.4.16"
+  },
+  "browserslist": [
+    "last 2 versions",
+    "not dead",
+    "> 0.5%"
+  ]
+}
