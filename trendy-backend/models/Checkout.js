@@ -52,7 +52,7 @@ const paymentMethodConfigSchema = new mongoose.Schema({
     label: { type: String, required: true },
     isEnabled: { type: Boolean, default: true },
     isDefault: { type: Boolean, default: false },
-    config: mongoose.Schema.Types.Mixed, // Gateway-specific config
+    config: mongoose.Schema.Types.Mixed,
     fees: {
         fixed: { type: Number, default: 0 },
         percentage: { type: Number, default: 0 },
@@ -69,9 +69,9 @@ const paymentMethodConfigSchema = new mongoose.Schema({
     requiresRedirect: { type: Boolean, default: false },
     supportsRefunds: { type: Boolean, default: true },
     supportsPartialRefunds: { type: Boolean, default: true },
-    processingTime: String, // e.g., "Instant", "1-2 business days"
-    requirements: [String] // e.g., ["Phone number required", "Safaricom SIM required"]
-}, { _id: false });
+    processingTime: String,
+    requirements: [String]
+}, { timestamps: true });
 
 const paymentTransactionSchema = new mongoose.Schema({
     checkoutSessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'CheckoutSession' },
@@ -548,7 +548,7 @@ module.exports = {
     CheckoutItem: checkoutItemSchema,
     CheckoutAddress: checkoutAddressSchema,
     DeliveryMethod: deliveryMethodSchema,
-    PaymentMethodConfig: paymentMethodConfigSchema,
+    PaymentMethodConfig: mongoose.model('PaymentMethodConfig', paymentMethodConfigSchema),
     PaymentTransaction: paymentTransactionSchema,
     CheckoutSession: checkoutSessionSchema,
     Invoice: invoiceSchema,

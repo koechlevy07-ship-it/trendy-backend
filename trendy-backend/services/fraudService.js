@@ -266,21 +266,21 @@ async function checkVelocity(session, userId) {
     let score = 0;
     let triggered = false;
     
-    const userId = checkoutSession.userId;
-    const sessionId = checkoutSession.sessionId;
+    const sessionUserId = userId || session.userId;
+    const sessionId = session.sessionId;
     
-    if (!userId && !sessionId) return { triggered: false, score: 0, rules: [] };
+    if (!sessionUserId && !sessionId) return { triggered: false, score: 0, rules: [] };
     
     const now = new Date();
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     
     // Build query
-    const query = userId ? { userId } : { sessionId: sessionId };
+    const query = sessionUserId ? { userId: sessionUserId } : { sessionId: sessionId };
     
     // Check orders in last hour
     const recentOrders = await Order.countDocuments({
-        userId: userId,
+        userId: sessionUserId,
         createdAt: { $gte: oneHourAgo }
     });
     
@@ -298,7 +298,7 @@ async function checkVelocity(session, userId) {
     
     // Check orders in last day
     const dailyOrders = await Order.countDocuments({
-        userId: userId,
+        userId: sessionUserId,
         createdAt: { $gte: oneDayAgo }
     });
     
@@ -316,7 +316,7 @@ async function checkVelocity(session, userId) {
     
     // Check failed payment attempts
     const failedAttempts = await PaymentTransaction.countDocuments({
-        userId: userId,
+        userId: sessionUserId,
         status: 'failed',
         createdAt: { $gte: oneDayAgo }
     });
@@ -335,7 +335,7 @@ async function checkVelocity(session, userId) {
     
     // Check checkout sessions in last hour
     const recentSessions = await CheckoutSession.countDocuments({
-        userId: userId,
+        userId: sessionUserId,
         createdAt: { $gte: oneHourAgo }
     });
     
@@ -710,8 +710,8 @@ async function checkEmail(session, userId) {
     let score = 0;
     let triggered = false;
     
-    const email = checkoutSession.shippingAddress?.email || 
-                  checkoutSession.billingAddress?.email ||
+    const email = session.shippingAddress?.email || 
+                  session.billingAddress?.email ||
                   (await User.findById(userId).select('email').lean())?.email;
     
     if (!email) return { triggered: false, score: 0, rules: [] };
@@ -792,8 +792,8 @@ async function checkPhone(session, userId) {
     let score = 0;
     let triggered = false;
     
-    const phone = checkoutSession.shippingAddress?.phone || 
-                  checkoutSession.billingAddress?.phone ||
+    const phone = session.shippingAddress?.phone || 
+                  session.billingAddress?.phone ||
                   (await User.findById(userId).select('phone').lean())?.phone;
     
     if (!phone) return { triggered: false, score: 0, rules: [] };

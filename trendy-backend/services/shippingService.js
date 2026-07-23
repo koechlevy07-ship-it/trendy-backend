@@ -161,8 +161,8 @@ async function calculateShipping({ address, items, subtotal, methodId, couponCod
                  z.cities?.includes(address.city) ||
                  z.countries?.includes(address.country))
             );
-            if (matchingZone) {
-                fee = matchingZone.fee;
+            if (zoneConfig) {
+                fee = zoneConfig.fee;
             }
         }
         
@@ -290,7 +290,6 @@ function calculateEstimatedDelivery(method, address = {}) {
     const now = new Date();
     const businessDays = getBusinessDays(method, address);
     const cutoffHour = 14; // 2 PM cutoff
-    const now = new Date();
     const currentHour = now.getHours();
     
     let deliveryDate = new Date();
@@ -495,7 +494,8 @@ async function getShippingAnalytics(days = 30) {
                 avgFee: { $avg: '$deliveryFee' },
                 avgDays: { $avg: '$estimatedDeliveryDays' }
             }
-        });
+        }
+    ]);
     
     return stats;
 }

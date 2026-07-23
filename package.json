@@ -1,22 +1,26 @@
-{
-  "name": "trendy-wardrobe-design-system",
-  "version": "1.0.0",
-  "description": "Luxury Fashion E-Commerce Design System - Module 1 Foundation",
-  "private": true,
-  "scripts": {
-    "test": "echo \"No tests specified\"",
-    "build:css": "postcss src/styles/main.css -o dist/trendy-wardrobe.css",
-    "watch:css": "postcss src/styles/main.css -o dist/trendy-wardrobe.css --watch"
-  },
-  "devDependencies": {
-    "postcss": "^8.4.31",
-    "postcss-cli": "^10.1.0",
-    "postcss-import": "^15.1.0",
-    "autoprefixer": "^10.4.16"
-  },
-  "browserslist": [
-    "last 2 versions",
-    "not dead",
-    "> 0.5%"
-  ]
-}
+# --- Build stage ---
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# --- Production stage ---
+FROM node:20-alpine AS production
+WORKDIR /app
+
+# Run as a non-root user for defense in depth
+RUN addgroup -g 1001 -S nodejs && adduser -S trendywardrobe -u 1001
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY package*.json ./
+COPY src ./src
+
+USER trendywardrobe
+
+ENV NODE_ENV=production
+EXPOSE 5000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:5000/api/health', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+
+CMD ["node", "src/server.js"]

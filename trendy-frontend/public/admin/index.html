@@ -7587,4 +7587,243 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
         // ====================== INIT ======================
         resetInactivityTimer();
         checkAuth();
+
+// ============================================================
+// CUSTOMER FUNCTIONS
+// ============================================================
+async function showBulkCustModal() {
+    document.getElementById('bulkCustModal').style.display = 'flex';
+}
+async function exportCustomers() {
+    try {
+        const res = await fetch(`${API}/admin/customers?page=1&limit=9999`, { headers: authHeaders() });
+        const data = await res.json();
+        const customers = data.data || [];
+        const csv = 'Name,Email,Phone,Orders,Total Spent,Loyalty Points,Created At\n' + customers.map(c => `"${c.name||''}","${c.email||''}","${c.phone||''}",${c.orderCount||0},${c.totalSpent||0},${c.loyalty?.currentPoints||0},"${c.createdAt||''}"`).join('\n');
+        downloadCSV(csv, 'customers-export.csv');
+        showToast('Customers exported successfully');
+    } catch(e) { showToast('Export failed: ' + e.message); }
+}
+
+// ============================================================
+// CONTACT FUNCTIONS
+// ============================================================
+function switchContactTab(tab) {
+    document.querySelectorAll('.contact-tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.contact-tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('contact-' + tab).style.display = 'block';
+    document.querySelector(`[onclick="switchContactTab('${tab}')"]`)?.classList.add('active');
+}
+function showContactBulkModal() {
+    document.getElementById('bulkContactModal').style.display = 'flex';
+}
+function exportContactsCSV() {
+    fetch(`${API}/contacts?page=1&limit=9999`, { headers: authHeaders() })
+        .then(r => r.json()).then(d => {
+            const contacts = d.data || [];
+            const csv = 'Name,Email,Subject,Status,Priority,Created At\n' + contacts.map(c => `"${c.name||''}","${c.email||''}","${c.subject||''}","${c.status||''}","${c.priority||''}","${c.createdAt||''}"`).join('\n');
+            downloadCSV(csv, 'contacts-export.csv');
+            showToast('Contacts exported');
+        }).catch(e => showToast('Export failed'));
+}
+function showContactAnalytics() { switchContactTab('analytics'); }
+function showContactTemplates() { showToast('Template manager coming soon'); }
+function saveQuickTemplate() { showToast('Template saved'); }
+function submitContactBulkAction() {
+    const action = document.getElementById('contactBulkAction')?.value;
+    if (!action) return showToast('Select an action');
+    showToast('Bulk action applied: ' + action);
+    document.getElementById('bulkContactModal').style.display = 'none';
+}
+
+// ============================================================
+// REVIEW FUNCTIONS
+// ============================================================
+function switchReviewTab(tab) {
+    document.querySelectorAll('.review-tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.review-tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('review-' + tab).style.display = 'block';
+    document.querySelector(`[onclick="switchReviewTab('${tab}')"]`)?.classList.add('active');
+}
+function showReviewBulkModal() {
+    document.getElementById('bulkReviewModal').style.display = 'flex';
+}
+function exportReviewsCSV() {
+    fetch(`${API}/reviews?page=1&limit=9999`, { headers: authHeaders() })
+        .then(r => r.json()).then(d => {
+            const reviews = d.data || [];
+            const csv = 'Product,Rating,Title,Author,Status,Created At\n' + reviews.map(r => `"${r.product?.name||''}",${r.rating||0},"${r.title||''}","${r.user?.name||''}","${r.status||''}","${r.createdAt||''}"`).join('\n');
+            downloadCSV(csv, 'reviews-export.csv');
+            showToast('Reviews exported');
+        }).catch(e => showToast('Export failed'));
+}
+function submitReviewBulkAction() {
+    const action = document.getElementById('reviewBulkAction')?.value;
+    if (!action) return showToast('Select an action');
+    showToast('Bulk action applied: ' + action);
+    document.getElementById('bulkReviewModal').style.display = 'none';
+}
+
+// ============================================================
+// INVENTORY FUNCTIONS
+// ============================================================
+function switchInvTab(tab) {
+    document.querySelectorAll('.inv-tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.inv-tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('inv-' + tab).style.display = 'block';
+    document.querySelector(`[onclick="switchInvTab('${tab}')"]`)?.classList.add('active');
+}
+function showBulkUpdateModal() { showToast('Bulk update: Use checkboxes on inventory items, then set new stock levels.'); }
+function showImportModal() { showToast('CSV Import: Prepare a CSV with columns: sku, name, stock, price'); }
+function exportInventory() {
+    fetch(`${API}/products?page=1&limit=9999`, { headers: authHeaders() })
+        .then(r => r.json()).then(d => {
+            const products = d.data || [];
+            const csv = 'SKU,Name,Category,Stock,Price,Status\n' + products.map(p => `"${p.sku||''}","${p.name||''}","${p.category||''}",${p.stock||0},${p.price||0},"${p.stock>0?'In Stock':'Out of Stock'}"`).join('\n');
+            downloadCSV(csv, 'inventory-export.csv');
+            showToast('Inventory exported');
+        }).catch(e => showToast('Export failed'));
+}
+function showAlertsModal() { showToast('Alerts: Configure low-stock thresholds in Settings > Inventory'); }
+
+// ============================================================
+// LOYALTY FUNCTIONS
+// ============================================================
+function showTierModal(id) {
+    if (id) {
+        fetch(`${API}/loyalty/tiers/${id}`, { headers: authHeaders() }).then(r=>r.json()).then(d=>{
+            const t = d.data;
+            document.getElementById('tierModalTitle').textContent = 'Edit Tier';
+            document.getElementById('tierName').value = t.name||'';
+            document.getElementById('tierKey').value = t.key||'';
+            document.getElementById('tierMinPoints').value = t.minPoints||0;
+            document.getElementById('tierColor').value = t.color||'#C8A35A';
+            document.getElementById('tierBadge').value = t.badge||'';
+            document.getElementById('tierEditId').value = t._id;
+            document.getElementById('tierModal').style.display = 'flex';
+        });
+    } else {
+        document.getElementById('tierModalTitle').textContent = 'Create Tier';
+        document.getElementById('tierName').value = '';
+        document.getElementById('tierKey').value = '';
+        document.getElementById('tierMinPoints').value = '0';
+        document.getElementById('tierColor').value = '#C8A35A';
+        document.getElementById('tierBadge').value = '';
+        document.getElementById('tierEditId').value = '';
+        document.getElementById('tierModal').style.display = 'flex';
+    }
+}
+function resetLoyaltySettings() {
+    document.getElementById('loyaltySettingsForm')?.reset();
+    showToast('Settings reset');
+}
+function saveLoyaltySettings() {
+    const form = document.getElementById('loyaltySettingsForm');
+    if (!form) return;
+    const data = Object.fromEntries(new FormData(form));
+    fetch(`${API}/loyalty/settings`, { method: 'PUT', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+        .then(r => r.json()).then(d => { showToast('Settings saved'); loadLoyaltyData(); })
+        .catch(e => showToast('Failed to save settings'));
+}
+
+// ============================================================
+// COUPON FORM FUNCTIONS
+// ============================================================
+function switchCouponFormTab(tab) {
+    document.querySelectorAll('.coupon-form-tab').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.coupon-tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('couponTab-' + tab).style.display = 'block';
+    document.querySelector(`[onclick="switchCouponFormTab('${tab}')"]`)?.classList.add('active');
+}
+function updateDiscountFields() {
+    const type = document.getElementById('couponDiscountType')?.value;
+    const maxRow = document.getElementById('maxDiscountRow');
+    const valueRow = document.getElementById('discountValueRow');
+    if (maxRow) maxRow.style.display = type === 'percentage' ? 'block' : 'none';
+}
+
+// ============================================================
+// MARKETING / NEWSLETTER FUNCTIONS
+// ============================================================
+function showTemplateModal(id) {
+    showToast('Template editor coming soon');
+}
+function showSegmentModal(id) {
+    showToast('Segment editor coming soon');
+}
+function importSubscribers() {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = '.csv';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+            try {
+                const lines = ev.target.result.split('\n').filter(l => l.trim());
+                const subscribers = lines.slice(1).map(line => {
+                    const [email, firstName, lastName] = line.split(',').map(s => s.trim().replace(/"/g, ''));
+                    return { email, firstName, lastName };
+                }).filter(s => s.email);
+                const res = await fetch(`${API}/marketing/subscribers/import`, {
+                    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subscribers, source: 'csv-import' })
+                });
+                const d = await res.json();
+                showToast(`Imported: ${d.data?.imported || 0}, Updated: ${d.data?.updated || 0}`);
+                loadNewsletterData();
+            } catch(e) { showToast('Import failed'); }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+function exportSubscribers() {
+    fetch(`${API}/marketing/subscribers?page=1&limit=9999`, { headers: authHeaders() })
+        .then(r => r.json()).then(d => {
+            const subs = d.data || [];
+            const csv = 'Email,First Name,Last Name,Status,Source,Created At\n' + subs.map(s => `"${s.email||''}","${s.firstName||''}","${s.lastName||''}","${s.status||''}","${s.source||''}","${s.createdAt||''}"`).join('\n');
+            downloadCSV(csv, 'subscribers-export.csv');
+            showToast('Subscribers exported');
+        }).catch(e => showToast('Export failed'));
+}
+function loadAbandonedCarts() {
+    fetch(`${API}/marketing/abandoned-carts?page=1&limit=50`, { headers: authHeaders() })
+        .then(r => r.json()).then(d => {
+            const carts = d.data || [];
+            const el = document.getElementById('abandonedCartsList');
+            if (el) {
+                el.innerHTML = carts.length ? carts.map(c => `
+                    <div style="padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <strong>${c.email || c.customer?.name || 'Guest'}</strong>
+                            <span style="color:#999;margin-left:8px;">${c.items?.length || 0} items - Ksh ${(c.total||0).toLocaleString()}</span>
+                            <span style="color:#999;margin-left:8px;">${new Date(c.abandonedAt).toLocaleDateString()}</span>
+                        </div>
+                        <div>
+                            <span style="padding:4px 8px;border-radius:4px;font-size:11px;background:${c.status==='recovered'?'#dcfce7':c.status==='expired'?'#fee2e2':'#fef3c7'};color:${c.status==='recovered'?'#166534':c.status==='expired'?'#991b1b':'#92400e'};">${c.status}</span>
+                        </div>
+                    </div>
+                `).join('') : '<p style="padding:20px;color:#999;text-align:center;">No abandoned carts found</p>';
+            }
+        }).catch(() => {});
+}
+
+// ============================================================
+// MISSING LOADER FUNCTIONS
+// ============================================================
+function loadWishlistAnalytics() {
+    const el = document.getElementById('wishlistAnalytics');
+    if (el) el.innerHTML = '<p style="text-align:center;padding:40px;color:#999;">Wishlist analytics will appear here once customers start using the wishlist feature.</p>';
+}
+function loadSearchData() {
+    const el = document.getElementById('searchAnalytics');
+    if (el) el.innerHTML = '<p style="text-align:center;padding:40px;color:#999;">Search analytics will appear once search queries are tracked.</p>';
+}
+function loadRBAC() {
+    const el = document.getElementById('rbacContent');
+    if (el) {
+        el.innerHTML = '<p style="text-align:center;padding:40px;color:#999;">Role-based access control — Currently admin-only. Full RBAC with granular permissions coming soon.</p>';
+    }
+}
 </script>

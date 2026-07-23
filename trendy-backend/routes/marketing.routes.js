@@ -15,6 +15,91 @@ const Notification = require('../models/Notification');
 // Email service (to be implemented)
 const { sendEmail, sendBulkEmail } = require('../services/emailService');
 
+async function processCampaign(campaignId) {
+    try {
+        const campaign = await Campaign.findById(campaignId).populate('template');
+        if (!campaign || campaign.status === 'sent') return;
+
+        campaign.status = 'sending';
+        await campaign.save();
+
+        let query = { status: 'subscribed', confirmed: true };
+        if (campaign.targeting?.segments?.length) {
+            query.segments = { $in: campaign.targeting.segments };
+        }
+        if (campaign.targeting?.tags?.length) {
+            query.tags = { $in: campaign.targeting.tags };
+        }
+
+        const subscribers = await Subscriber.find(query).lean();
+        let sent = 0, failed = 0;
+
+        for (const sub of subscribers) {
+            try {
+                const html = campaign.template?.html || campaign.content?.html || `<p>${campaign.name}</p>`;
+                const personalizedHtml = html
+                    .replace(/\{\{firstName\}\}/gi, sub.firstName || '')
+                    .replace(/\{\{lastName\}\}/gi, sub.lastName || '')
+                    .replace(/\{\{email\}\}/gi, sub.email || '')
+                    .replace(/\{\{unsubscribeUrl\}\}/gi, `${process.env.FRONTEND_URL || 'https://trendy-frontend-ashen.vercel.app'}/unsubscribe?email=${encodeURIComponent(sub.email)}`);
+
+                await sendBulkEmail({
+                    to: sub.email,
+                    subject: campaign.name,
+                    html: personalizedHtml
+                });
+                sent++;
+            } catch (e) {
+                failed++;
+            }
+        }
+
+        campaign.status = 'completed';
+        campaign.sentAt = campaign.sentAt || new Date();
+        campaign.completedAt = new Date();
+        campaign.analytics = { ...campaign.analytics, sent, delivered: sent, failed };
+        await campaign.save();
+    } catch (err) {
+        console.error('Process campaign error:', err);
+    }
+}
+
+async function sendTestEmail(campaign, recipients) {
+    const results = { sent: 0, failed: 0, errors: [] };
+    const html = campaign.template?.html || campaign.content?.html || `<p>${campaign.name} - Test Email</p>`;
+
+    for (const email of recipients) {
+        try {
+            await sendBulkEmail({ to: email, subject: `[TEST] ${campaign.name}`, html });
+            results.sent++;
+        } catch (err) {
+            results.failed++;
+            results.errors.push({ email, error: err.message });
+        }
+    }
+    return results;
+}
+
+async function sendTestEmailFromTemplate(template, recipients, testData = {}) {
+    const results = { sent: 0, failed: 0, errors: [] };
+    let html = template.html || template.blocks?.map(b => b.content || '').join('') || `<p>${template.name}</p>`;
+
+    for (const [key, value] of Object.entries(testData)) {
+        html = html.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'gi'), value);
+    }
+
+    for (const email of recipients) {
+        try {
+            await sendBulkEmail({ to: email, subject: `[TEST] ${template.name}`, html });
+            results.sent++;
+        } catch (err) {
+            results.failed++;
+            results.errors.push({ email, error: err.message });
+        }
+    }
+    return results;
+}
+
 // ============================================================
 // CAMPAIGN ROUTES
 // ============================================================
@@ -843,7 +928,7 @@ router.get('/abandoned-carts', authenticateToken, requireAdmin, async (req, res)
 // POST /api/marketing/abandoned-carts/recover - Trigger recovery for a cart
 router.post('/abandoned-carts/:id/recover', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        const { sendEmail, couponCode } = req.body;
+        const { sendEmail: shouldSendEmail, couponCode } = req.body;
         const cart = await AbandonedCart.findById(req.params.id);
         if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
 
@@ -851,10 +936,10 @@ router.post('/abandoned-carts/:id/recover', authenticateToken, requireAdmin, asy
             return res.status(400).json({ success: false, message: 'Cart is not recoverable' });
         }
 
-        cart.startRecovery();
+        await cart.startRecovery();
         await cart.save();
 
-        if (sendEmail) {
+        if (shouldSendEmail) {
             // Send recovery email (would use email service)
             // await sendAbandonedCartEmail(cart, couponCode);
         }

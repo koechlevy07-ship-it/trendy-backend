@@ -251,7 +251,7 @@ router.post('/redeem', authenticateToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'This reward is not available for your tier' });
         }
 
-        if (reward.stock > 0 && reward.stock <= 0) {
+        if (reward.stock !== undefined && reward.stock <= 0) {
             return res.status(400).json({ success: false, message: 'Reward out of stock' });
         }
 

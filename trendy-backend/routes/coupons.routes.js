@@ -5,6 +5,7 @@ const Promotion = require('../models/Promotion');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Order = require('../models/Order');
+const User = require('../models/User');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 function escapeRegex(str) {

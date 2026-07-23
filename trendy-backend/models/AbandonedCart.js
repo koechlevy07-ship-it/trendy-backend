@@ -184,7 +184,7 @@ abandonedCartSchema.virtual('recoveryRate').get(function() {
     if (this.status === 'recovered') return 100;
     if (this.status === 'expired') return 0;
     return this.recovery?.emailsSent > 0 ? 50 : 0; // Simplified
-};
+});
 
 // Method to check if cart is recoverable
 abandonedCartSchema.methods.isRecoverable = function() {

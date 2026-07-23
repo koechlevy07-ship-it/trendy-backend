@@ -24,63 +24,6 @@ const loginSchema = Joi.object({
     password: Joi.string().required()
 });
 
-// Admin user schema
-const adminUserSchema = Joi.object({
-    name: Joi.string().trim().min(2).max(100).required(),
-    username: Joi.string().trim().min(3).max(50).allow('', null),
-    email: Joi.string().email().lowercase().required(),
-    password: Joi.string().min(8).max(128).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/).allow('', null),
-    roleId: Joi.string().required(),
-    phone: Joi.string().pattern(/^[+]?[0-9]{10,15}$/).allow('', null),
-    department: Joi.string().allow('', null),
-    jobTitle: Joi.string().trim().max(100).allow('', null),
-    employeeId: Joi.string().trim().max(50).allow('', null),
-    profilePhoto: Joi.string().uri().allow('', null),
-    notes: Joi.string().max(500).allow('', null),
-    status: Joi.string().valid('active', 'suspended', 'blocked', 'pending_verification').default('active')
-});
-
-// Role schema
-const roleSchema = Joi.object({
-    name: Joi.string().trim().min(2).max(100).required(),
-    slug: Joi.string().lowercase().trim().regex(/^[a-z0-9-]+$/).allow('', null),
-    description: Joi.string().max(500).allow('', null),
-    priority: Joi.number().integer().min(0).max(1000).default(10),
-    permissions: Joi.array().items(Joi.object({
-        module: Joi.string().required(),
-        actions: Joi.array().items(Joi.string()).min(1)
-    }))
-});
-
-// Department schema
-const departmentSchema = Joi.object({
-    name: Joi.string().trim().min(2).max(100).required(),
-    managerId: Joi.string().allow('', null),
-    parentDepartment: Joi.string().allow('', null),
-    color: Joi.string().pattern(/^#[0-9A-F]{6}$/i).default('#6366f1'),
-    icon: Joi.string().trim().max(50).default('fa-building'),
-    isActive: Joi.boolean().default(true)
-});
-
-// Security policy schema
-const securityPolicySchema = Joi.object({
-    passwordMinLength: Joi.number().integer().min(6).max(128).default(8),
-    passwordRequireUppercase: Joi.boolean().default(true),
-    passwordRequireLowercase: Joi.boolean().default(true),
-    passwordRequireNumber: Joi.boolean().default(true),
-    passwordRequireSpecial: Joi.boolean().default(true),
-    sessionTimeoutMinutes: Joi.number().integer().min(5).max(1440).default(60),
-    maxLoginAttempts: Joi.number().integer().min(1).max(20).default(5),
-    accountLockoutMinutes: Joi.number().integer().min(1).max(1440).default(30),
-    jwtExpiration: Joi.string().default('7d'),
-    maxSessionsPerUser: Joi.number().integer().min(1).max(50).default(5),
-    enforceTwoFactor: Joi.boolean().default(false),
-    ipWhitelist: Joi.array().items(Joi.string()).default([]),
-    maintenanceMode: Joi.boolean().default(false),
-    maintenanceMessage: Joi.string().max(500).default('We are currently undergoing scheduled maintenance. Please check back shortly.'),
-    maintenanceAllowAdmin: Joi.boolean().default(true)
-});
-
 // Product schemas
 const productSchema = Joi.object({
     name: Joi.string().trim().min(1).max(200).required(),
@@ -202,12 +145,9 @@ module.exports = {
         product: productSchema,
         order: orderSchema,
         contact: contactSchema,
-    review: reviewSchema,
-    qa: qaSchema,
-    answer: answerSchema,
-    coupon: couponSchema,
-    adminUser: adminUserSchema,
-    role: roleSchema,
-    department: departmentSchema,
-    securityPolicy: securityPolicySchema
+        review: reviewSchema,
+        qa: qaSchema,
+        answer: answerSchema,
+        coupon: couponSchema
+    }
 };

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { CheckoutSession, PaymentTransaction, Invoice, ShippingMethod, DeliveryEstimate, FraudCheck, CheckoutAnalytics, SavedAddress, PaymentMethod } = require('../models/Checkout');
+const { CheckoutSession, PaymentTransaction, Invoice, ShippingMethod, DeliveryEstimate, FraudCheck, CheckoutAnalytics, SavedAddress, PaymentMethod, PaymentMethodConfig } = require('../models/Checkout');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const Order = require('../models/Order');
@@ -16,7 +16,7 @@ const { processMpesaPayment, verifyMpesaPayment, processStripePayment, processPa
 const { calculateShipping, estimateDelivery } = require('../services/shippingService');
 const { calculateTax } = require('../services/taxService');
 const { runFraudChecks } = require('../services/fraudService');
-const { sendOrderConfirmation, sendCheckoutAbandoned, sendPaymentConfirmation } = require('../services/emailService');
+const { sendOrderConfirmation, sendCheckoutAbandoned, sendPaymentConfirmation, sendOrderStatusUpdate } = require('../services/emailService');
 const { generateInvoicePDF, sendInvoiceEmail } = require('../services/invoiceService');
 
 // Helper functions
@@ -88,7 +88,6 @@ router.post('/', async (req, res) => {
                 brand: product.brand || '',
                 lineTotal: product.price * (item.quantity || 1),
                 discount: 0,
-                originalPrice: product.originalPrice || 0,
                 deliveryEstimate: product.deliveryEstimate || '2-5 business days'
             });
             
@@ -106,7 +105,7 @@ router.post('/', async (req, res) => {
             items: enrichedItems,
             subtotal,
             currency: 'KES',
-            expiresAt: new Date(Date.now() + 30 * 60 * 1000)
+            expiresAt
         };
         
         if (req.user) {
@@ -288,11 +287,11 @@ router.post('/:sessionToken/validate', async (req, res) => {
         
         // Validate stock
         for (const item of session.items) {
-        //     const product = await Product.findById(item.productId);
-        //     if (!product || product.stock < item.quantity) {
-        //         errors.push(`Insufficient stock for ${item.name}`);
-        //     }
-        // }
+            const product = await Product.findById(item.productId);
+            if (!product || product.stock < item.quantity) {
+                errors.push(`Insufficient stock for ${item.name}`);
+            }
+        }
         
         // Validate coupon if applied
         if (session.couponCode) {
@@ -674,23 +673,23 @@ router.post('/:sessionToken/payment-method', async (req, res) => {
 // POST /api/payment/mpesa – Initiate M-Pesa STK Push
 router.post('/payment/mpesa', async (req, res) => {
     try {
-        const { checkoutSessionToken, phoneNumber, amount } = req.body;
+        const { checkoutSessionToken, phoneNumber } = req.body;
         
-        const session = await CheckoutSession.findOne({ sessionToken: checkoutSessionToken });
-        if (!session) {
+        const checkoutSession = await CheckoutSession.findOne({ sessionToken: checkoutSessionToken });
+        if (!checkoutSession) {
             return res.status(404).json({ success: false, message: 'Checkout session not found' });
         }
         
-        const amount = amount || session.total;
+        const mpesaAmount = req.body.amount || checkoutSession.total;
         
         // Create payment transaction record
         const transaction = await PaymentTransaction.create({
-            checkoutSessionId: session._id,
+            checkoutSessionId: checkoutSession._id,
             userId: req.user?.id,
             transactionId: generateTransactionId('MPESA'),
-            paymentRef: `MPESA-${session.sessionToken}-${Date.now()}`,
+            paymentRef: `MPESA-${checkoutSession.sessionToken}-${Date.now()}`,
             provider: 'mpesa',
-            amount,
+            amount: mpesaAmount,
             currency: 'KES',
             status: 'initiated',
             paymentMethod: 'mpesa',
@@ -699,10 +698,10 @@ router.post('/payment/mpesa', async (req, res) => {
                 platformFee: 0,
                 totalFees: 0
             },
-            netAmount: amount,
+            netAmount: mpesaAmount,
             metadata: {
                 phoneNumber,
-                checkoutSessionToken: session.sessionToken
+                checkoutSessionToken: checkoutSession.sessionToken
             },
             expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
         });
@@ -710,10 +709,10 @@ router.post('/payment/mpesa', async (req, res) => {
         // Initiate M-Pesa STK Push
         const result = await processMpesaPayment({
             phoneNumber,
-            amount,
-            accountReference: session.sessionToken,
+            amount: mpesaAmount,
+            accountReference: checkoutSession.sessionToken,
             transactionDesc: `Order payment for Trendy Wardrobe`,
-            callbackUrl: `${process.env.API_URL}/api/payment/callback/mpesa`,
+            callbackUrl: `${process.env.API_URL || 'https://trendy-backend-jq27.onrender.com'}/api/payment/callback/mpesa`,
             transactionId: transaction.transactionId
         });
         
@@ -731,10 +730,9 @@ router.post('/payment/mpesa', async (req, res) => {
         await transaction.save();
         
         // Update checkout session
-        const session = await CheckoutSession.findOne({ sessionToken: req.body.checkoutSessionToken });
-        session.paymentStatus = 'processing';
-        session.paymentTransactionId = transaction._id;
-        await session.save();
+        checkoutSession.paymentStatus = 'processing';
+        checkoutSession.paymentTransactionId = transaction._id;
+        await checkoutSession.save();
         
         res.json({
             success: true,
@@ -838,12 +836,52 @@ router.post('/payment/callback/:provider', async (req, res) => {
         const { provider } = req.params;
         
         if (provider === 'mpesa') {
-            // Handle M-Pesa callback
-            const callback
+            const callbackData = req.body.Body?.stkCallback;
+            if (!callbackData) {
+                return res.status(400).json({ success: false, message: 'Invalid callback data' });
+            }
+            
+            const checkoutRequestId = callbackData.CheckoutRequestID;
+            const resultCode = callbackData.ResultCode;
+            const resultDesc = callbackData.ResultDesc;
+            
+            const transaction = await PaymentTransaction.findOne({
+                'metadata.checkoutSessionToken': { $exists: true },
+                transactionId: { $regex: /^MPESA-/ }
+            }).sort({ createdAt: -1 });
+            
+            if (transaction) {
+                transaction.status = resultCode === 0 ? 'completed' : 'failed';
+                transaction.completedAt = resultCode === 0 ? new Date() : undefined;
+                transaction.gatewayResponse = callbackData;
+                transaction.metadata = { ...transaction.metadata, resultCode, resultDesc };
+                await transaction.save();
+                
+                if (resultCode === 0) {
+                    const session = await CheckoutSession.findById(transaction.checkoutSessionId);
+                    if (session) {
+                        session.paymentStatus = 'completed';
+                        session.status = 'completed';
+                        session.completedAt = new Date();
+                        await session.save();
+                        
+                        const order = await createOrderFromCheckout(session);
+                        const user = await User.findById(session.userId);
+                        if (user) {
+                            sendOrderConfirmation(order, user).catch(() => {});
+                        }
+                        await awardLoyaltyPoints(session);
+                    }
+                }
+            }
+            
+            res.json({ ResultCode: 0, ResultDesc: 'Success' });
+        } else {
+            res.json({ ResultCode: 0, ResultDesc: 'Callback received' });
         }
     } catch (err) {
         console.error('Payment callback error:', err);
-        res.status(500).json({ success: false, message: 'Callback processing failed' });
+        res.status(200).json({ ResultCode: 0, ResultDesc: 'Callback processed' });
     }
 });
 
@@ -1396,9 +1434,6 @@ async function createOrderFromCheckout(session) {
         couponDiscount: session.couponDiscount || 0,
         total: session.total,
         paymentMethod: session.paymentMethod?.type || 'cash',
-        couponCode: session.couponCode,
-        couponDiscount: session.couponDiscount,
-        discount: session.couponDiscount || 0,
         status: 'pending',
         notes: session.notes || '',
         timeline: [{ status: 'pending', note: 'Order placed', timestamp: new Date() }],
@@ -1476,6 +1511,39 @@ async function createInvoiceFromOrder(order) {
     
     await invoice.save();
     return invoice;
+}
+
+function isValidTransition(from, to) {
+    const transitions = {
+        pending: ['confirmed', 'processing', 'cancelled'],
+        confirmed: ['processing', 'shipped', 'cancelled'],
+        processing: ['packed', 'shipped', 'cancelled'],
+        packed: ['shipped', 'cancelled'],
+        shipped: ['delivered', 'returned'],
+        delivered: ['returned', 'refunded'],
+        returned: ['refunded', 'cancelled'],
+        cancelled: [],
+        refunded: []
+    };
+    return transitions[from]?.includes(to) || false;
+}
+
+async function logInventoryChange(productId, quantity, action, reason, reference) {
+    try {
+        const InventoryLog = require('../models/Inventory');
+        if (InventoryLog.create) {
+            await InventoryLog.create({
+                productId,
+                quantity: Math.abs(quantity),
+                action,
+                reason,
+                reference,
+                timestamp: new Date()
+            });
+        }
+    } catch (err) {
+        console.error('Log inventory change error:', err);
+    }
 }
 
 module.exports = router;

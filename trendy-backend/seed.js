@@ -1,10 +1,23 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 const Category = require('./models/Category');
 const Product = require('./models/Product');
 const FAQ = require('./models/FAQ');
+const User = require('./models/User');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/trendy-wardrobe';
+
+// Helper: generate unique slug
+function generateSlug(name) {
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 10000);
+  return `${base}-${timestamp}-${random}`;
+}
 
 const categories = [
     { name: 'Trench Coats', slug: 'trench-coats', description: 'Premium executive trench coats for the modern professional', image: 'https://placehold.co/600x400/2C2C2C/C8A35A?text=Trench+Coats', displayOrder: 1, featured: true },
@@ -77,24 +90,64 @@ async function seed() {
         await Category.deleteMany({});
         await Product.deleteMany({});
         await FAQ.deleteMany({});
-        console.log('Cleared existing categories, products, and FAQs');
+        await User.deleteMany({});
+        console.log('Cleared existing data');
 
         // Insert categories
         const createdCategories = await Category.insertMany(categories);
         console.log(`Created ${createdCategories.length} categories`);
 
-        // Insert products
-        const createdProducts = await Product.insertMany(products);
-        console.log(`Created ${createdProducts.length} products`);
+        // Generate unique slugs for each product
+        const productsWithSlugs = products.map(p => {
+            const categoryDoc = createdCategories.find(c => c.name === p.category);
+            return {
+                ...p,
+                slug: generateSlug(p.name),
+                category: categoryDoc ? categoryDoc._id : null
+            };
+        });
+
+        // Insert products one by one
+        let insertedCount = 0;
+        for (const productData of productsWithSlugs) {
+            const product = new Product(productData);
+            await product.save();
+            insertedCount++;
+        }
+        console.log(`Created ${insertedCount} products`);
 
         // Insert FAQs
         const createdFAQs = await FAQ.insertMany(faqs);
         console.log(`Created ${createdFAQs.length} FAQs`);
 
-        console.log('\nSeed complete!');
-        console.log('Categories:', createdCategories.map(c => c.name).join(', '));
-        console.log('Products:', createdProducts.length);
-        console.log('FAQs:', createdFAQs.length);
+        // ---- USERS ----
+        // Admin user
+        const adminPassword = await bcrypt.hash('Admin123!', 10);
+        await User.create({
+            name: 'Admin',
+            email: 'admin@trendy.com',
+            password: adminPassword,
+            role: 'admin',
+            isVerified: true,
+        });
+        console.log('✅ Created admin user: admin@trendy.com / Admin123!');
+
+        // Customer user
+        const customerPassword = await bcrypt.hash('Customer123!', 10);
+        await User.create({
+            name: 'John Customer',
+            email: 'customer@example.com',
+            password: customerPassword,
+            role: 'customer',
+            isVerified: true,
+        });
+        console.log('✅ Created customer user: customer@example.com / Customer123!');
+
+        console.log('\n✅ Seed complete!');
+        console.log(`Categories: ${createdCategories.length}`);
+        console.log(`Products: ${insertedCount}`);
+        console.log(`FAQs: ${createdFAQs.length}`);
+        console.log(`Users: 2 (1 admin, 1 customer)`);
 
         process.exit(0);
     } catch (err) {
