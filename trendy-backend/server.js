@@ -46,12 +46,13 @@ app.use(mongoSanitize());
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   message: { success: false, message: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.headers.authorization,
 });
-app.use(limiter);
+app.use('/api', limiter);
 
 app.get('/api/health', (req, res) => {
   const dbState = mongoose.connection.readyState;
@@ -111,21 +112,24 @@ if (fs.existsSync(routesPath)) {
     try {
       const routeModule = require(path.join(routesPath, file));
       let basePath = file.replace(/\.routes\.js$/i, '').replace(/\.js$/i, '');
-      if (typeof routeModule === 'function' && routeModule.name === 'router') {
-        app.use(`/api/${basePath}`, routeModule);
-      } else if (typeof routeModule === 'function') {
-        const router = routeModule();
-        if (router && typeof router.use === 'function') {
-          app.use(`/api/${basePath}`, router);
+      const mount = (mod, base) => {
+        if (typeof mod === 'function' && mod.name === 'router') {
+          app.use(`/api/${base}`, mod);
+        } else if (typeof mod === 'function') {
+          const r = mod();
+          app.use(`/api/${base}`, r && typeof r.use === 'function' ? r : mod);
+        } else if (mod && typeof mod === 'object' && mod.router) {
+          app.use(`/api/${base}`, mod.router);
         } else {
-          app.use(`/api/${basePath}`, routeModule);
+          app.use(`/api/${base}`, mod);
         }
-      } else if (routeModule && typeof routeModule === 'object' && routeModule.router) {
-        app.use(`/api/${basePath}`, routeModule.router);
-      } else {
-        app.use(`/api/${basePath}`, routeModule);
+      };
+      mount(routeModule, basePath);
+      const plural = basePath + 's';
+      if (basePath !== plural) {
+        try { mount(routeModule, plural); } catch (e) { /* ignore */ }
       }
-      console.log(`  ✓ /api/${basePath} <- ${file}`);
+      console.log(`  ✓ /api/${basePath} (+plural) <- ${file}`);
     } catch (err) {
       console.error(`  ✗ Failed to mount ${file}:`, err.message);
     }
