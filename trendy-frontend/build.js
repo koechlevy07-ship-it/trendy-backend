@@ -31,7 +31,7 @@ function build() {
         'about.html', 'terms.html', 'privacy.html', 'product-details.html',
         'cart.html', 'checkout.html', 'wishlist.html', 'order-confirmation.html',
         'account.html', 'robots.txt', 'sitemap.xml', 'manifest.json',
-        'manifest.webmanifest', 'favicon.svg', 'sw.js'
+        'manifest.webmanifest', 'favicon.svg', 'favicon.ico', 'sw.js'
     ];
 
     for (const file of rootFiles) {
