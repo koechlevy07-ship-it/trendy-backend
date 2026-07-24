@@ -111,8 +111,10 @@
         text-decoration: none;
         z-index: 1;
         pointer-events: none;
+        max-width: calc(50% - 50px);
+        overflow: hidden;
     }
-    .logo-link-mobile svg { pointer-events: auto; }
+    .logo-link-mobile svg { pointer-events: visiblePainted; }
     .logo-svg-mobile {
         width: 140px;
         height: auto;
@@ -172,6 +174,8 @@
        align-items: center;
        gap: 8px;
        flex-shrink: 0;
+       position: relative;
+       z-index: 2;
    }
 
    /* Icon Buttons - Base */
