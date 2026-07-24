@@ -1,7 +1,7 @@
-const CACHE_NAME = 'trendy-v7';
-const STATIC_CACHE = 'trendy-static-v7';
-const DYNAMIC_CACHE = 'trendy-dynamic-v7';
-const IMAGE_CACHE = 'trendy-images-v7';
+const CACHE_NAME = 'trendy-v8';
+const STATIC_CACHE = 'trendy-static-v8';
+const DYNAMIC_CACHE = 'trendy-dynamic-v8';
+const IMAGE_CACHE = 'trendy-images-v8';
 
 const STATIC_ASSETS = [
     '/',

@@ -757,7 +757,7 @@
         async function loadDashboardData() {
             try {
                 const [ordersRes,statsRes,usersRes,productsRes] = await Promise.allSettled([
-                    fetch(`${API_URL}/orders/admin/all`,{headers:getHeaders()}), fetch(`${API_URL}/orders/admin/stats`,{headers:getHeaders()}),
+                    fetch(`${API_URL}/orders/admin/all`,{headers:getHeaders()}), fetch(`${API_URL}/orders/admin/statistics`,{headers:getHeaders()}),
                     fetch(`${API_URL}/users`,{headers:getHeaders()}), fetch(`${API_URL}/products`)
                 ]);
                 const orders=ordersRes.status==='fulfilled'&&ordersRes.value.ok?await ordersRes.value.json():[];

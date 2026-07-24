@@ -142,7 +142,7 @@ router.get('/export', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // GET /api/orders/admin/statistics – enhanced stats
-router.get('/admin/statistics', authenticateToken, requireAdmin, async (req, res) => {
+async function handleOrderStats(req, res) {
     try {
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -216,7 +216,9 @@ router.get('/admin/statistics', authenticateToken, requireAdmin, async (req, res
         console.error('Statistics error:', err);
         res.status(500).json({ success: false, message: 'Failed to fetch statistics' });
     }
-});
+}
+router.get('/admin/statistics', authenticateToken, requireAdmin, handleOrderStats);
+router.get('/admin/stats', authenticateToken, requireAdmin, handleOrderStats);
 
 // GET /api/orders/admin/all – all orders (admin)
 router.get('/admin/all', authenticateToken, requireAdmin, async (req, res) => {
