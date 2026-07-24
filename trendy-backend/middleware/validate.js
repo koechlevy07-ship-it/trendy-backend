@@ -72,7 +72,26 @@ const productSchema = Joi.object({
     installmentEligible: Joi.boolean().optional(),
     installmentPrice: Joi.number().min(0).optional().allow(null, ''),
     visibility: Joi.string().valid('visible', 'hidden', 'featured-only').optional(),
-    status: Joi.string().valid('published', 'draft', 'archived').optional()
+    status: Joi.string().valid('published', 'draft', 'archived', 'scheduled').optional(),
+    barcode: Joi.string().trim().allow('').optional(),
+    subcategory: Joi.string().trim().allow('').optional(),
+    collection: Joi.string().trim().allow('').optional(),
+    ageGroup: Joi.string().trim().allow('').optional(),
+    discountType: Joi.string().valid('percentage', 'fixed', '').optional(),
+    discountValue: Joi.number().min(0).optional().allow(null, ''),
+    discountStart: Joi.date().optional().allow(null, ''),
+    discountEnd: Joi.date().optional().allow(null, ''),
+    allowBackorders: Joi.boolean().optional(),
+    reservedStock: Joi.number().min(0).integer().optional(),
+    isTrending: Joi.boolean().optional(),
+    isLimitedEdition: Joi.boolean().optional(),
+    isScheduled: Joi.boolean().optional(),
+    scheduledPublishDate: Joi.date().optional().allow(null, ''),
+    seoTitle: Joi.string().trim().max(70).allow('').optional(),
+    seoDescription: Joi.string().trim().max(160).allow('').optional(),
+    seoKeywords: Joi.alternatives().try(Joi.array().items(Joi.string().trim()).max(20), Joi.string()).optional(),
+    ogImage: Joi.string().trim().allow('').optional(),
+    canonicalUrl: Joi.string().trim().allow('').optional()
 });
 
 // Order schemas
