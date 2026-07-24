@@ -345,8 +345,6 @@ router.get('/analytics/export', authenticateToken, requireAdmin, async (req, res
 // PUBLIC CUSTOMER ENDPOINTS
 // ============================================================
 
-const { authenticateToken } = require('../middleware/auth');
-
 // GET /api/promo/flash-sales/active – active flash sales for storefront
 router.get('/flash-sales/active/public', async (req, res) => {
     try {
