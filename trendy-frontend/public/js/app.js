@@ -3553,6 +3553,21 @@
             }
             mql.addEventListener('change', applyMobileNav);
             applyMobileNav(mql);
+
+            // Bottom nav search button → open search overlay
+            const bottomSearchBtn = document.getElementById('bottomNavSearchBtn');
+            if (bottomSearchBtn) {
+                bottomSearchBtn.addEventListener('click', () => {
+                    const so = document.getElementById('searchOverlay');
+                    const soInput = document.getElementById('searchOverlayInput');
+                    if (so) {
+                        so.classList.add('open');
+                        document.body.classList.add('no-scroll');
+                        if (typeof renderRecentSearches === 'function') renderRecentSearches();
+                        setTimeout(() => soInput?.focus(), 100);
+                    }
+                });
+            }
         })();
 
         // Virtual keyboard: hide fixed overlays when keyboard opens on mobile

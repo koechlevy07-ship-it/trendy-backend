@@ -2210,7 +2210,7 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
-            z-index: 999;
+            z-index: 10001;
             transition: 0.3s;
             text-decoration: none;
             color: #fff;
@@ -2703,7 +2703,7 @@
 
         /* WhatsApp: right on mobile, above bottom nav, respecting safe area */
         @media (max-width: 768px) {
-            .floating-whatsapp { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); right: 16px; left: auto; width: 52px; height: 52px; font-size: 24px; }
+            .floating-whatsapp { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); right: 16px; left: auto; width: 54px; height: 54px; font-size: 26px; z-index: 10001; }
         }
 
         /* Enhanced search overlay */
@@ -3050,9 +3050,9 @@
         ============================================================ */
         @media (max-width: 768px) {
             .mobile-bottom-nav button {
-                min-width: 44px;
+                flex: 1;
                 min-height: 44px;
-                padding: 8px 12px;
+                padding: 8px 0;
             }
             .icon-btn, .search-btn, .wishlist-btn {
                 min-width: 44px;
