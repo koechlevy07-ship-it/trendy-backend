@@ -1741,6 +1741,25 @@
                             <div class="form-group"><label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="cookieNoticeEnabled" /> Enable Cookie Notice</label></div>
                         </div>
                     </div>
+
+                    <div class="detail-section" style="border:1px solid #fca5a5;border-radius:var(--radius);padding:20px;">
+                        <h4 style="color:#dc2626;margin-bottom:8px;"><i class="fas fa-exclamation-triangle"></i> Reset Data</h4>
+                        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">Permanently delete selected records. This action cannot be undone.</p>
+                        <div id="resetCheckboxes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:16px;">
+                            <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;"><input type="checkbox" value="orders" /> Orders</label>
+                            <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;"><input type="checkbox" value="products" /> Products</label>
+                            <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;"><input type="checkbox" value="contacts" /> Contacts</label>
+                            <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;"><input type="checkbox" value="reviews" /> Reviews</label>
+                            <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;"><input type="checkbox" value="notifications" /> Notifications</label>
+                            <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;"><input type="checkbox" value="coupons" /> Coupons</label>
+                            <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;"><input type="checkbox" value="wishlists" /> Wishlists</label>
+                            <label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;"><input type="checkbox" value="customers" /> Customers</label>
+                        </div>
+                        <div style="display:flex;gap:12px;">
+                            <button id="resetDataBtn" style="padding:8px 20px;background:#dc2626;color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:0.85rem;"><i class="fas fa-trash-alt"></i> Reset Selected</button>
+                            <button onclick="document.querySelectorAll('#resetCheckboxes input[type=checkbox]').forEach(b=>b.checked=false)" style="padding:8px 20px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--radius-sm);cursor:pointer;font-size:0.85rem;">Clear Selection</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- BACKUPS TAB -->
@@ -3443,6 +3462,8 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
                     $('exportConfigBtn').addEventListener('click', exportConfig);
                     $('importConfigBtn').addEventListener('click', ()=>$('importConfigFile').click());
                     $('importConfigFile').addEventListener('change', importConfig);
+                    /* Reset Data */
+                    $('resetDataBtn').addEventListener('click', resetSelectedData);
                     /* Audit */
                     $('loadAuditLogsBtn').addEventListener('click', ()=>{ window._auditPage=1; loadAuditLogs(); });
                     $('exportAuditLogsBtn').addEventListener('click', exportAuditLogs);
@@ -3800,6 +3821,26 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
         }
 
         /* ===== EMAIL TEST ===== */
+        async function resetSelectedData() {
+            const boxes = document.querySelectorAll('#resetCheckboxes input[type="checkbox"]:checked');
+            const collections = Array.from(boxes).map(b => b.value);
+            if (!collections.length) { showToast('Select at least one collection'); return; }
+            if (!confirm('This will permanently delete all selected records. Continue?')) return;
+            try {
+                const res = await fetch(`${API_URL}/admin/reset`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ collections })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || 'Failed');
+                const summary = Object.entries(data.deleted).map(([k, v]) => `${k}: ${v}`).join(', ');
+                showToast('Reset done — ' + summary);
+                boxes.forEach(b => b.checked = false);
+                loadDashboardData();
+            } catch (err) { showToast(err.message); }
+        }
+
         async function sendTestEmail() {
             const recipient = document.getElementById('emailTestRecipient').value;
             if (!recipient) { showToast('Enter a test recipient email'); return; }
