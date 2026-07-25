@@ -5,12 +5,23 @@ const Product = require('../models/Product');
 const Coupon = require('../models/Coupon');
 const { authenticateToken } = require('../middleware/auth');
 
+// Helper: compute effective stock for a product
+function getEffectiveStock(product) {
+    if (product.soldOut) return 0;
+    if (product.stock > 0) return product.stock;
+    if (product.limitedAvailable && product.limitedPieces > 0) return product.limitedPieces;
+    if (product.preOrder) return 999;
+    if (product.inStock) return product.stockThreshold || 5;
+    return 0;
+}
+
 // Helper: refresh cart items with live product data
 async function refreshCartItems(cart) {
     const updated = [];
     for (const item of cart.items) {
         const product = await Product.findById(item.productId);
         if (product) {
+            const effectiveStock = getEffectiveStock(product);
             updated.push({
                 ...item.toObject(),
                 price: product.price,
@@ -20,8 +31,8 @@ async function refreshCartItems(cart) {
                 brand: product.brand || '',
                 category: product.category || '',
                 sku: product.sku || '',
-                inStock: product.stock > 0,
-                stock: product.stock,
+                inStock: effectiveStock > 0,
+                stock: effectiveStock,
                 deliveryEstimate: product.deliveryEstimate || '2-5 business days',
                 material: product.material || ''
             });
@@ -89,7 +100,8 @@ router.post('/', authenticateToken, async (req, res) => {
         const { productId, quantity, size, color } = req.body;
         const product = await Product.findById(productId);
         if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-        if (product.stock < (quantity || 1)) return res.status(400).json({ success: false, message: 'Not enough stock' });
+        const effectiveStock = getEffectiveStock(product);
+        if (effectiveStock < (quantity || 1)) return res.status(400).json({ success: false, message: 'Not enough stock' });
 
         let cart = await Cart.findOne({ userId: req.user._id });
         if (!cart) {
@@ -104,7 +116,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
         if (existing) {
             existing.quantity += quantity || 1;
-            if (product.stock < existing.quantity) {
+            if (effectiveStock < existing.quantity) {
                 return res.status(400).json({ success: false, message: 'Not enough stock' });
             }
             existing.savedForLater = false;
@@ -142,7 +154,7 @@ router.put('/:itemId', authenticateToken, async (req, res) => {
         if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
 
         const product = await Product.findById(item.productId);
-        if (product && product.stock < quantity) {
+        if (product && getEffectiveStock(product) < quantity) {
             return res.status(400).json({ success: false, message: 'Not enough stock' });
         }
 
@@ -349,12 +361,13 @@ router.post('/validate-stock', authenticateToken, async (req, res) => {
                 issues.push({ itemId: item._id, name: item.name, issue: 'Product no longer exists' });
                 continue;
             }
-            if (product.stock < 1) {
+            const effectiveStock = getEffectiveStock(product);
+            if (effectiveStock < 1) {
                 issues.push({ itemId: item._id, name: item.name, issue: 'Out of stock', stock: 0 });
                 continue;
             }
-            if (product.stock < item.quantity) {
-                issues.push({ itemId: item._id, name: item.name, issue: `Only ${product.stock} available`, stock: product.stock, requested: item.quantity });
+            if (effectiveStock < item.quantity) {
+                issues.push({ itemId: item._id, name: item.name, issue: `Only ${effectiveStock} available`, stock: effectiveStock, requested: item.quantity });
             }
             if (product.price !== item.price) {
                 issues.push({ itemId: item._id, name: item.name, issue: 'Price changed', oldPrice: item.price, newPrice: product.price });
@@ -389,7 +402,9 @@ router.post('/sync', authenticateToken, async (req, res) => {
 
         for (const incoming of items) {
             const product = await Product.findById(incoming.productId || incoming.id);
-            if (!product || product.stock < 1) continue;
+            if (!product) continue;
+            const effectiveStock = getEffectiveStock(product);
+            if (effectiveStock < 1) continue;
 
             const existing = cart.items.find(i =>
                 i.productId.toString() === (incoming.productId || incoming.id) &&
@@ -399,14 +414,14 @@ router.post('/sync', authenticateToken, async (req, res) => {
             );
 
             if (existing) {
-                existing.quantity = Math.min(existing.quantity + (incoming.quantity || 1), product.stock);
+                existing.quantity = Math.min(existing.quantity + (incoming.quantity || 1), effectiveStock);
             } else {
                 cart.items.push({
                     productId: product._id,
                     name: product.name,
                     price: product.price,
                     originalPrice: product.originalPrice || 0,
-                    quantity: Math.min(incoming.quantity || 1, product.stock),
+                    quantity: Math.min(incoming.quantity || 1, effectiveStock),
                     size: incoming.size || '',
                     color: incoming.color || '',
                     image: product.images?.[0] || '',

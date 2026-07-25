@@ -32,6 +32,22 @@ async function logInventoryChange(productId, qty, type, reason, ref = '') {
     } catch (err) { console.error('Inventory sync error:', err.message); }
 }
 
+async function restoreProductStock(item, reason, orderNumber) {
+    const product = await Product.findById(item.productId);
+    if (!product) return;
+    if (product.limitedAvailable) {
+        await Product.findByIdAndUpdate(item.productId, {
+            $inc: { limitedPieces: item.quantity, totalSold: -item.quantity }
+        });
+    } else {
+        await Product.findByIdAndUpdate(item.productId, {
+            $inc: { stock: item.quantity, totalSold: -item.quantity },
+            $set: { inStock: true, soldOut: false }
+        });
+    }
+    await logInventoryChange(item.productId, item.quantity, reason, reason, orderNumber);
+}
+
 function generateOrderNumber() {
     const ts = Date.now().toString(36).toUpperCase();
     const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -325,13 +341,20 @@ router.post('/', authenticateToken, validate(schemas.order), async (req, res) =>
         let subtotal = 0;
         const orderItems = [];
         const stockUpdates = [];
+        const limitedUpdates = [];
 
         for (const item of items) {
             const product = await Product.findById(item.productId || item.id);
             if (!product) return res.status(400).json({ success: false, message: `Product not found: ${item.productId || item.id}` });
             const qty = item.quantity || 1;
 
-            if (!product.preOrder && !product.limitedAvailable) {
+            if (product.limitedAvailable) {
+                const effectiveStock = product.limitedPieces || 0;
+                if (effectiveStock < qty) {
+                    return res.status(400).json({ success: false, message: `Insufficient stock for "${product.name}". Available: ${effectiveStock}, requested: ${qty}` });
+                }
+                limitedUpdates.push({ productId: product._id, qty });
+            } else if (!product.preOrder) {
                 if (product.stock < qty) {
                     return res.status(400).json({ success: false, message: `Insufficient stock for "${product.name}". Available: ${product.stock}, requested: ${qty}` });
                 }
@@ -432,6 +455,17 @@ router.post('/', authenticateToken, validate(schemas.order), async (req, res) =>
             await logInventoryChange(update.productId, -update.qty, 'order', 'Order placed', order.orderNumber);
         }
 
+        for (const update of limitedUpdates) {
+            await Product.findByIdAndUpdate(update.productId, {
+                $inc: { limitedPieces: -update.qty, totalSold: update.qty }
+            });
+            const updated = await Product.findById(update.productId);
+            if (updated && updated.limitedPieces <= 0) {
+                await Product.findByIdAndUpdate(update.productId, { $set: { soldOut: true } });
+            }
+            await logInventoryChange(update.productId, -update.qty, 'order', 'Order placed (limited)', order.orderNumber);
+        }
+
         const Cart = require('../models/Cart');
         await Cart.findOneAndUpdate(
             { userId: req.user.id },
@@ -491,11 +525,7 @@ router.post('/:id/return', authenticateToken, requireAdmin, async (req, res) => 
         order.timeline.push({ status: 'returned', note: note || 'Return processed', admin: req.user?.name || req.user?.email || 'admin', timestamp: new Date() });
 
         for (const item of order.items) {
-            await Product.findByIdAndUpdate(item.productId, {
-                $inc: { stock: item.quantity, totalSold: -item.quantity },
-                $set: { inStock: true, soldOut: false }
-            });
-            await logInventoryChange(item.productId, item.quantity, 'return', 'Return processed', order.orderNumber);
+            await restoreProductStock(item, 'return', order.orderNumber);
         }
         await order.save();
         res.json({ success: true, data: order });
@@ -528,8 +558,7 @@ router.post('/admin/bulk', authenticateToken, requireAdmin, async (req, res) => 
                     order.timeline.push({ status: value, note: note || `Bulk status update to ${value}`, admin: adminName, timestamp: new Date() });
                     if (value === 'cancelled' && old !== 'cancelled') {
                         for (const item of order.items) {
-                            await Product.findByIdAndUpdate(item.productId, { $inc: { stock: item.quantity, totalSold: -item.quantity }, $set: { inStock: true, soldOut: false } });
-                            await logInventoryChange(item.productId, item.quantity, 'cancel', 'Bulk cancel', order.orderNumber);
+                            await restoreProductStock(item, 'cancel', order.orderNumber);
                         }
                     }
                     const user = await User.findById(order.user).select('name email');
@@ -551,8 +580,7 @@ router.post('/admin/bulk', authenticateToken, requireAdmin, async (req, res) => 
                     order.cancelReason = note || 'Bulk cancelled';
                     order.timeline.push({ status: 'cancelled', note: note || 'Bulk cancelled', admin: adminName, timestamp: new Date() });
                     for (const item of order.items) {
-                        await Product.findByIdAndUpdate(item.productId, { $inc: { stock: item.quantity, totalSold: -item.quantity }, $set: { inStock: true, soldOut: false } });
-                        await logInventoryChange(item.productId, item.quantity, 'cancel', 'Bulk cancel', order.orderNumber);
+                        await restoreProductStock(item, 'cancel', order.orderNumber);
                     }
                 } else {
                     results.errors.push({ id, message: `Unknown action: ${action}` }); continue;
@@ -635,11 +663,7 @@ router.put('/:id/cancel', authenticateToken, async (req, res) => {
         await order.save();
 
         for (const item of order.items) {
-            await Product.findByIdAndUpdate(item.productId, {
-                $inc: { stock: item.quantity, totalSold: -item.quantity },
-                $set: { inStock: true, soldOut: false }
-            });
-            await logInventoryChange(item.productId, item.quantity, 'cancel', 'Order cancelled by customer', order.orderNumber);
+            await restoreProductStock(item, 'cancel', order.orderNumber);
         }
 
         res.json({ success: true, data: order });
@@ -669,11 +693,7 @@ router.put('/:id/status', authenticateToken, requireAdmin, async (req, res) => {
 
             if (status === 'cancelled' && oldStatus !== 'cancelled') {
                 for (const item of order.items) {
-                    await Product.findByIdAndUpdate(item.productId, {
-                        $inc: { stock: item.quantity, totalSold: -item.quantity },
-                        $set: { inStock: true, soldOut: false }
-                    });
-                    await logInventoryChange(item.productId, item.quantity, 'cancel', 'Order cancelled by admin', order.orderNumber);
+                    await restoreProductStock(item, 'cancel', order.orderNumber);
                 }
             }
         }
@@ -770,11 +790,7 @@ router.put('/:id/refund', authenticateToken, requireAdmin, async (req, res) => {
 
             if (oldRefundStatus !== 'completed') {
                 for (const item of order.items) {
-                    await Product.findByIdAndUpdate(item.productId, {
-                        $inc: { stock: item.quantity, totalSold: -item.quantity },
-                        $set: { inStock: true, soldOut: false }
-                    });
-                    await logInventoryChange(item.productId, item.quantity, 'refund', 'Stock restored from refund', order.orderNumber);
+                    await restoreProductStock(item, 'refund', order.orderNumber);
                 }
             }
         } else {

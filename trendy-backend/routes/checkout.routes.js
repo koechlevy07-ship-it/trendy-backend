@@ -66,8 +66,12 @@ router.post('/', async (req, res) => {
                 return res.status(400).json({ success: false, message: `Product not found: ${item.productId || item.id}` });
             }
             
-            if (product.stock < (item.quantity || 1)) {
-                return res.status(400).json({ success: false, message: `Insufficient stock for "${product.name}"` });
+            const qty = item.quantity || 1;
+            const effectiveStock = (product.limitedAvailable && product.limitedPieces > 0) ? product.limitedPieces :
+                                  product.limitedAvailable ? 0 :
+                                  product.stock;
+            if (effectiveStock < qty) {
+                return res.status(400).json({ success: false, message: `Insufficient stock for "${product.name}". Available: ${effectiveStock}, requested: ${qty}` });
             }
             
             const price = product.price;
@@ -288,8 +292,11 @@ router.post('/:sessionToken/validate', async (req, res) => {
         // Validate stock
         for (const item of session.items) {
             const product = await Product.findById(item.productId);
-            if (!product || product.stock < item.quantity) {
-                errors.push(`Insufficient stock for ${item.name}`);
+            if (!product) { errors.push(`Product not found: ${item.name}`); continue; }
+            const effectiveStock = (product.limitedAvailable && product.limitedPieces > 0) ? product.limitedPieces :
+                                  product.stock;
+            if (effectiveStock < item.quantity) {
+                errors.push(`Insufficient stock for ${item.name}. Available: ${effectiveStock}, requested: ${item.quantity}`);
             }
         }
         
@@ -1036,11 +1043,7 @@ router.put('/:id/status', authenticateToken, requireAdmin, async (req, res) => {
             if (status === 'cancelled' && oldStatus !== 'cancelled') {
                 // Restore inventory
                 for (const item of order.items) {
-                    await Product.findByIdAndUpdate(item.productId, {
-                        $inc: { stock: item.quantity, totalSold: -item.quantity },
-                        $set: { inStock: true, soldOut: false }
-                    });
-                    await logInventoryChange(item.productId, item.quantity, 'cancel', 'Order cancelled by admin', order.orderNumber);
+                    await restoreProductStock(item, 'cancel', order.orderNumber);
                 }
             }
         }
@@ -1093,11 +1096,7 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
         
         // Restore inventory
         for (const item of order.items) {
-            await Product.findByIdAndUpdate(item.productId, {
-                $inc: { stock: item.quantity, totalSold: -item.quantity },
-                $set: { inStock: true, soldOut: false }
-            });
-            await logInventoryChange(item.productId, item.quantity, 'cancel', 'Order cancelled by customer', order.orderNumber);
+            await restoreProductStock(item, 'cancel', order.orderNumber);
         }
         
         res.json({ success: true, data: order });
@@ -1544,6 +1543,22 @@ async function logInventoryChange(productId, quantity, action, reason, reference
     } catch (err) {
         console.error('Log inventory change error:', err);
     }
+}
+
+async function restoreProductStock(item, reason, orderNumber) {
+    const product = await Product.findById(item.productId);
+    if (!product) return;
+    if (product.limitedAvailable) {
+        await Product.findByIdAndUpdate(item.productId, {
+            $inc: { limitedPieces: item.quantity, totalSold: -item.quantity }
+        });
+    } else {
+        await Product.findByIdAndUpdate(item.productId, {
+            $inc: { stock: item.quantity, totalSold: -item.quantity },
+            $set: { inStock: true, soldOut: false }
+        });
+    }
+    await logInventoryChange(item.productId, item.quantity, reason, reason, orderNumber);
 }
 
 module.exports = router;
