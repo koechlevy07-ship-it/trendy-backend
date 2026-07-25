@@ -58,6 +58,24 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Too many login attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/auth/login', loginLimiter);
+
+const mongooseLib = require('mongoose');
+app.use((req, res, next) => {
+  const idParams = req.params.id || req.params.productId || req.params.userId;
+  if (idParams && !mongooseLib.Types.ObjectId.isValid(idParams)) {
+    return res.status(400).json({ success: false, message: 'Invalid ID format' });
+  }
+  next();
+});
+
 app.get('/api/health', (req, res) => {
   const dbState = mongoose.connection.readyState;
   const dbStatus = ['disconnected', 'connected', 'connecting', 'disconnecting'][dbState] || 'unknown';
@@ -145,6 +163,27 @@ if (fs.existsSync(routesPath)) {
     }
   });
 }
+
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = function(data) {
+    if (data && typeof data === 'object') {
+      if (data.data && typeof data.data === 'object') {
+        if (Array.isArray(data.data)) {
+          data.data = data.data.map(item => {
+            if (item && typeof item === 'object') { const { __v, ...rest } = item; return rest; }
+            return item;
+          });
+        } else {
+          const { __v, ...rest } = data.data;
+          data.data = rest;
+        }
+      }
+    }
+    return originalJson(data);
+  };
+  next();
+});
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.method} ${req.originalUrl} not found` });
