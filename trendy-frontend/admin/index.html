@@ -10,7 +10,7 @@
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
     <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.cloudinary.com https://trendy-backend-jq27.onrender.com https://www.googletagmanager.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https://res.cloudinary.com data: blob: https://placehold.co https://cdn-icons-png.flaticon.com https://maps.googleapis.com https://maps.gstatic.com; connect-src 'self' https://trendy-backend-jq27.onrender.com https://api.cloudinary.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://cdn.vercel-insights.com https://vercel.live https://maps.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://res.cloudinary.com https://placehold.co blob: https://cdn-icons-png.flaticon.com https://maps.googleapis.com https://maps.gstatic.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com; connect-src 'self' https://trendy-backend-jq27.onrender.com https://api.cloudinary.com https://cdn.vercel-insights.com https://vercel.live https://maps.googleapis.com https://www.google-analytics.com https://www.google.com; frame-src https://www.google.com https://www.google.com/maps https://vercel.live; worker-src 'self';" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZYYHCQ4HZX"></script>
@@ -28,6 +28,8 @@
             --border-light: #E5E7EB;
             --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
             --shadow-lg: 0 10px 40px rgba(0,0,0,0.08);
+            --bg-card: #FFFFFF; --bg-tertiary: #F3F4F6;
+            --border-color: #E5E7EB;
             --gold: #C8A96A; --gold-dark: #B8975A; --gold-light: #D9BE8A;
             --success: #22C55E; --warning: #F59E0B; --error: #EF4444; --info: #3B82F6;
             --radius: 12px; --radius-sm: 8px;
@@ -618,6 +620,11 @@
                         <button onclick="exportOrdersCSV()" style="background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border-color);padding:5px 12px;border-radius:4px;cursor:pointer;font-size:0.78rem;"><i class="fas fa-download"></i> CSV</button>
                         <button onclick="exportOrdersJSON()" style="background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border-color);padding:5px 12px;border-radius:4px;cursor:pointer;font-size:0.78rem;"><i class="fas fa-file-export"></i> Export</button>
                     </div>
+                </div>
+                <div id="ordersBulkBar" class="orders-bulk-bar" style="display:none;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 12px;margin-bottom:12px;background:var(--gold-light);border-radius:6px;font-size:0.82rem;">
+                    <span><strong id="bulkSelectedCount">0</strong> selected</span>
+                    <button onclick="showBulkOrderModal()" style="background:var(--gold);color:#000;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:0.78rem;font-weight:600;">Bulk Action</button>
+                    <button onclick="selectedOrderIds.clear();document.querySelectorAll('.order-checkbox').forEach(c=>c.checked=false);document.getElementById('orderSelectAll').checked=false;document.querySelectorAll('.orders-bulk-bar').forEach(el=>el.style.display='none');" style="background:transparent;border:1px solid var(--border-color);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:0.78rem;">Clear</button>
                 </div>
                 <!-- Table -->
                 <div class="table-section">
@@ -2103,6 +2110,7 @@
                 <div id="stdSizesField" class="form-group"><label>Sizes (comma separated)</label><input type="text" id="productSizes" placeholder="S, M, L, XL" /></div>
                 <div id="stdColorsField" class="form-group"><label>Colors (comma separated)</label><input type="text" id="productColors" placeholder="Black, Navy, Beige" /></div>
                 <div id="stdLimitedField" class="form-group"><label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="productLimitedAvailable" /> Limited pieces available</label></div>
+                <div id="stdLimitedPiecesField" class="form-group"><label>Limited Pieces</label><input type="number" id="productLimitedPieces" min="0" value="0" /></div>
                 <div class="form-group"><label>Short Description</label><input type="text" id="productShortDesc" placeholder="Brief tagline (max 300 chars)" maxlength="300" /></div>
                 <div class="form-group"><label>Tags (comma separated)</label><input type="text" id="productTags" placeholder="summer, casual, premium" /></div>
                 <div class="form-group"><label>Visibility</label><select id="productVisibility"><option value="visible">Visible</option><option value="hidden">Hidden</option><option value="featured-only">Featured Only</option></select></div>
@@ -2115,6 +2123,8 @@
                         <label style="font-weight:400;font-size:0.85rem;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="productNewArrival" /> New Arrival</label>
                         <label style="font-weight:400;font-size:0.85rem;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="productBestSeller" /> Best Seller</label>
                         <label style="font-weight:400;font-size:0.85rem;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="productSponsored" /> Sponsored</label>
+                        <label style="font-weight:400;font-size:0.85rem;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="productSoldOut" /> Sold Out</label>
+                        <label style="font-weight:400;font-size:0.85rem;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="productPreOrder" /> Pre-Order</label>
                     </div>
                 </div>
                 <!-- Flash Sale -->
@@ -3006,11 +3016,14 @@ Sitemap: https://trendywardrobe.com/sitemap.xml</textarea>
                     <div class="image-upload-area"><input type="file" id="heroVideoInput" accept="video/mp4,video/webm,video/quicktime" disabled /><label for="heroVideoInput" class="upload-label" style="opacity:0.5;cursor:not-allowed;"><i class="fas fa-video"></i> Upload hero video (MP4/WebM) — <em>Disabled</em></label></div>
                     <div class="image-preview-grid" id="heroVideoPreview"></div><input type="hidden" id="heroVideoUrl" />
                 </div>
-                <div class="form-group"><label>Heading *</label><input type="text" id="heroSlideHeading" required placeholder="New Collection 2024" /></div>
-                <div class="form-group"><label>Subheading</label><input type="text" id="heroSlideSubheading" placeholder="Discover the latest trends" /></div>
-                <div class="form-group"><label>Button Text</label><input type="text" id="heroSlideBtnText" placeholder="Shop Now" /></div>
-                <div class="form-group"><label>Button Link</label><input type="text" id="heroSlideBtnLink" placeholder="/collections" /></div>
-                <div class="form-group"><label>Display Order</label><input type="number" id="heroSlideOrder" min="0" value="0" /></div>
+                <div class="form-group" style="grid-column:1/-1;"><label>Heading *</label><input type="text" id="heroSlideHeading" required placeholder="LUXURY FASHION" style="width:100%;padding:8px 10px;border:1px solid var(--border-light);border-radius:var(--radius-sm);font-size:0.85rem;" /></div>
+                <div class="form-group" style="grid-column:1/-1;"><label>Secondary Text (below heading)</label><input type="text" id="heroSlideSubheading" placeholder="NEW COLLECTION 2026" style="width:100%;padding:8px 10px;border:1px solid var(--border-light);border-radius:var(--radius-sm);font-size:0.85rem;" /></div>
+                <div class="form-group" style="grid-column:1/-1;"><label>Description</label><textarea id="heroSlideDescription" rows="2" placeholder="Discover timeless pieces designed for your signature style." style="width:100%;padding:8px 10px;border:1px solid var(--border-light);border-radius:var(--radius-sm);font-size:0.85rem;resize:vertical;"></textarea></div>
+                <div class="form-group" style="grid-column:1/-1;"><label>Primary CTA Text</label><input type="text" id="heroSlideBtnText" placeholder="SHOP THE COLLECTION" style="width:100%;padding:8px 10px;border:1px solid var(--border-light);border-radius:var(--radius-sm);font-size:0.85rem;" /></div>
+                <div class="form-group" style="grid-column:1/-1;"><label>Primary CTA Link</label><input type="text" id="heroSlideBtnLink" placeholder="/collections" style="width:100%;padding:8px 10px;border:1px solid var(--border-light);border-radius:var(--radius-sm);font-size:0.85rem;" /></div>
+                <div class="form-group" style="grid-column:1/-1;"><label>Secondary CTA Text</label><input type="text" id="heroSlideSecondaryCtaText" placeholder="VIEW LOOKBOOK" style="width:100%;padding:8px 10px;border:1px solid var(--border-light);border-radius:var(--radius-sm);font-size:0.85rem;" /></div>
+                <div class="form-group" style="grid-column:1/-1;"><label>Secondary CTA Link</label><input type="text" id="heroSlideSecondaryCtaLink" placeholder="/lookbook" style="width:100%;padding:8px 10px;border:1px solid var(--border-light);border-radius:var(--radius-sm);font-size:0.85rem;" /></div>
+                <div class="form-group"><label>Display Order</label><input type="number" id="heroSlideOrder" min="0" value="0" style="width:100%;padding:8px 10px;border:1px solid var(--border-light);border-radius:var(--radius-sm);font-size:0.85rem;" /></div>
                 <div class="form-group"><label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="heroSlideActive" checked /> Active</label></div>
             </div>
             <div style="display:flex;gap:16px;margin-top:20px;"><button type="submit" class="btn-submit">Save Slide</button><button type="button" class="btn-cancel" id="heroSlideFormCancel">Cancel</button></div>
@@ -3259,13 +3272,21 @@ Sitemap: https://trendywardrobe.com/sitemap.xml</textarea>
                 return Date.now() >= payload.exp * 1000;
             } catch { return false; }
         }
-        async function safeFetch(url, options = {}) {
+        async function safeFetch(url, options = {}, retries = 2) {
             if (isTokenExpired() && getToken()) {
                 showToast('Session expired. Please log in again.');
                 logout();
                 throw new Error('Session expired');
             }
-            return fetch(url, options);
+            for (let i = 0; i <= retries; i++) {
+                try {
+                    const res = await fetch(url, options);
+                    return res;
+                } catch(e) {
+                    if (i < retries) await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+                    else throw e;
+                }
+            }
         }
 
         async function adminLogin(email, password) {
@@ -4056,11 +4077,48 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
         }
         document.querySelectorAll('.chart-filters button').forEach(btn=>{ btn.addEventListener('click',function(){ document.querySelectorAll('.chart-filters button').forEach(b=>b.classList.remove('active')); this.classList.add('active'); renderChart(this.dataset.period); }); });
 
-        async function loadDashboard() { startNotificationPolling(); await loadDashboardData(); await Promise.all([loadProducts(),loadCategories()]); loadOrders(); loadCustomers(); }
+        let notificationInterval = null;
+
+        async function fetchNotifications() {
+            try {
+                const res = await safeFetch(`${API_URL}/notifications`, { headers: getHeaders() });
+                if (!res || !res.ok) return;
+                const data = await res.json();
+                const notifications = data.data || data.notifications || [];
+                const unread = notifications.filter(n => !n.read && !n.isRead);
+                const badge = document.getElementById('unreadBadge');
+                if (badge) {
+                    badge.textContent = unread.length;
+                    badge.style.display = unread.length > 0 ? 'flex' : 'none';
+                }
+                const list = document.getElementById('notificationList');
+                if (!list) return;
+                if (notifications.length === 0) {
+                    list.innerHTML = '<div class="notification-empty">No notifications</div>';
+                    return;
+                }
+                list.innerHTML = notifications.slice(0, 20).map(n => `
+                    <div class="notification-item ${(!n.read && !n.isRead) ? 'unread' : ''}">
+                        <div class="notif-content">
+                            <div style="font-size:0.8rem;">${escHtml(n.message || n.title || '')}</div>
+                            <div class="notif-time">${n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch(e) { /* notifications are non-critical — silently ignore */ }
+        }
+
+        function startNotificationPolling() {
+            fetchNotifications();
+            if (notificationInterval) clearInterval(notificationInterval);
+            notificationInterval = setInterval(fetchNotifications, 60000);
+        }
+
+        async function loadDashboard() { try { startNotificationPolling(); } catch(e) {} await loadDashboardData(); await Promise.all([loadProducts(),loadCategories()]); loadOrders(); loadCustomers(); }
 
         async function loadDashboardData() {
             try {
-                const res = await fetch(`${API_URL}/admin/dashboard`, { headers: getHeaders() });
+                const res = await safeFetch(`${API_URL}/admin/dashboard`, { headers: getHeaders() });
                 if (!res.ok) throw new Error('Dashboard API failed');
                 const json = await res.json();
                 const d = json.data || {};
@@ -4210,7 +4268,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
         let allProducts=[], allOrders=[], allUsers=[], selectedProductIds=new Set();
         let productSearchDebounce, productPage=1, productTotalPages=1, productSort='', productViewMode='table';
         async function loadProductStats() {
-            try{const res=await fetch(`${API_URL}/admin/products/stats`,{headers:getHeaders()});if(!res.ok)return;const d=await res.json();if(d.success&&d.data){const s=d.data;document.getElementById('prodStatTotal').textContent=s.total;document.getElementById('prodStatActive').textContent=s.published;document.getElementById('prodStatDraft').textContent=s.draft;document.getElementById('prodStatFeatured').textContent=s.featured;document.getElementById('prodStatOutOfStock').textContent=s.outOfStock;document.getElementById('prodStatLowStock').textContent=s.lowStock;document.getElementById('prodStatHidden').textContent=s.hidden;}}catch(e){}
+            try{const res=await safeFetch(`${API_URL}/admin/products/stats`,{headers:getHeaders()});if(!res.ok)return;const d=await res.json();if(d.success&&d.data){const s=d.data;document.getElementById('prodStatTotal').textContent=s.total;document.getElementById('prodStatActive').textContent=s.published;document.getElementById('prodStatDraft').textContent=s.draft;document.getElementById('prodStatFeatured').textContent=s.featured;document.getElementById('prodStatOutOfStock').textContent=s.outOfStock;document.getElementById('prodStatLowStock').textContent=s.lowStock;document.getElementById('prodStatHidden').textContent=s.hidden;}}catch(e){}
         }
         async function loadProducts(pg) {
             if(pg!==undefined)productPage=pg;
@@ -4222,7 +4280,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
             const limit=25;
             const params=new URLSearchParams({page:productPage,limit,...(cat?{category:cat}:{}),...(gender?{gender}:{}),...(status?{status}:{}),...(sort?{sort}:{}),...(search?{search}:{})});
             try{
-                const res=await fetch(`${API_URL}/admin/products?${params}`,{headers:getHeaders()});
+                const res=await safeFetch(`${API_URL}/admin/products?${params}`,{headers:getHeaders()});
                 if(!res.ok)throw new Error('Failed');
                 const data=await res.json();
                 allProducts=Array.isArray(data)?data:(data.data||[]);
@@ -4496,6 +4554,9 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
             document.getElementById('productOgImage').value=p.ogImage||'';
             document.getElementById('productCanonicalUrl').value=p.canonicalUrl||'';
             document.getElementById('productLimitedAvailable').checked=!!p.limitedAvailable;
+            document.getElementById('productLimitedPieces').value=p.limitedPieces||0;
+            document.getElementById('productSoldOut').checked=!!p.soldOut;
+            document.getElementById('productPreOrder').checked=!!p.preOrder;
             loadCategories().then(()=>{populateCategorySelect();document.getElementById('productCategory').value=p.category||'';toggleTrenchFields();});
             document.getElementById('productGender').value=p.gender||'unisex';
             document.getElementById('productSizes').value=(p.sizes||[]).join(', '); document.getElementById('productColors').value=(p.colors||[]).join(', ');
@@ -4516,7 +4577,10 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
             document.getElementById('productFormTitle').textContent='Add Product'; document.getElementById('productForm').reset();
             document.getElementById('productId').value=''; document.getElementById('productImages').value='';
             document.getElementById('productImagePreview').innerHTML=''; document.getElementById('productStock').value=0;
-            document.getElementById('productStockThreshold').value=5; document.getElementById('productOriginalPrice').value=''; document.getElementById('productLimitedAvailable').checked=false;
+            document.getElementById('productStockThreshold').value=5; document.getElementById('productOriginalPrice').value='';             document.getElementById('productLimitedAvailable').checked=false;
+            document.getElementById('productLimitedPieces').value=0;
+            document.getElementById('productSoldOut').checked=false;
+            document.getElementById('productPreOrder').checked=false;
             document.getElementById('tcPreOrder').checked=false; document.getElementById('tcSoldOut').checked=false; document.getElementById('tcLimitedAvailable').checked=false;
             document.getElementById('tcLimitedPieces').value=0; document.getElementById('tcColor').value=''; document.getElementById('tcSize').value=''; document.getElementById('tcOriginalPrice').value='';
             document.getElementById('productFeatured').checked=false; document.getElementById('productNewArrival').checked=false;
@@ -4615,6 +4679,9 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
                     sizes:document.getElementById('productSizes').value.split(',').map(s=>s.trim()).filter(Boolean),
                     colors:document.getElementById('productColors').value.split(',').map(s=>s.trim()).filter(Boolean),
                     limitedAvailable:document.getElementById('productLimitedAvailable').checked,
+                    limitedPieces:parseInt(document.getElementById('productLimitedPieces').value)||0,
+                    soldOut:document.getElementById('productSoldOut').checked,
+                    preOrder:document.getElementById('productPreOrder').checked,
                     tags:document.getElementById('productTags').value.split(',').map(s=>s.trim()).filter(Boolean),
                     visibility:document.getElementById('productVisibility').value,
                     status:document.getElementById('productPublishStatus').value,
@@ -4651,7 +4718,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
                     images
                 };
             }
-            try{const url=id?`${API_URL}/products/${id}`:`${API_URL}/products`;const method=id?'PUT':'POST';const res=await fetch(url,{method,headers:getHeaders(),body:JSON.stringify(data)});if(!res.ok)throw new Error('Failed to save');showToast(id?'Product updated':'Product added');document.getElementById('productFormModal').classList.remove('show');await loadProducts();loadDashboardData();}catch(err){showToast(err.message);}
+            try{const url=id?`${API_URL}/products/${id}`:`${API_URL}/products`;const method=id?'PUT':'POST';const res=await safeFetch(url,{method,headers:getHeaders(),body:JSON.stringify(data)});if(!res.ok)throw new Error('Failed to save');showToast(id?'Product updated':'Product added');document.getElementById('productFormModal').classList.remove('show');await loadProducts();loadDashboardData();}catch(err){showToast(err.message);}
         });
         document.getElementById('productFormCancel').addEventListener('click',()=>document.getElementById('productFormModal').classList.remove('show'));
         document.getElementById('previewProductBtn')?.addEventListener('click',()=>{
@@ -4664,7 +4731,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
         let categories=[], catPage=1, catTotalPages=1, catViewMode='table', catSearchDebounce;
         let catSelectedIds=new Set();
         async function loadCategoryStats() {
-            try{const res=await fetch(`${API_URL}/categories/stats`,{headers:getHeaders()});if(!res.ok)return;const d=await res.json();if(d.success&&d.data){const s=d.data;document.getElementById('catStatTotal').textContent=s.total;document.getElementById('catStatPublished').textContent=s.published;document.getElementById('catStatHidden').textContent=s.hidden;document.getElementById('catStatFeatured').textContent=s.featured;document.getElementById('catStatParent').textContent=s.withParent;document.getElementById('catStatSub').textContent=s.subcategories;document.getElementById('catStatWithProds').textContent=s.withProducts;document.getElementById('catStatEmpty').textContent=s.empty;}}catch(e){}
+            try{const res=await safeFetch(`${API_URL}/categories/stats`,{headers:getHeaders()});if(!res.ok)return;const d=await res.json();if(d.success&&d.data){const s=d.data;document.getElementById('catStatTotal').textContent=s.total;document.getElementById('catStatPublished').textContent=s.published;document.getElementById('catStatHidden').textContent=s.hidden;document.getElementById('catStatFeatured').textContent=s.featured;document.getElementById('catStatParent').textContent=s.withParent;document.getElementById('catStatSub').textContent=s.subcategories;document.getElementById('catStatWithProds').textContent=s.withProducts;document.getElementById('catStatEmpty').textContent=s.empty;}}catch(e){}
         }
         async function loadCategories(pg) {
             if(pg!==undefined)catPage=pg;
@@ -4675,7 +4742,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
             const limit=50;
             const params=new URLSearchParams({page:catPage,limit,...(status?{status}:{}),...(featured?{featured}:{}),...(sort?{sort}:{}),...(search?{search}:{})});
             try{
-                const res=await fetch(`${API_URL}/categories?${params}`,{headers:getHeaders()});
+                const res=await safeFetch(`${API_URL}/categories?${params}`,{headers:getHeaders()});
                 if(!res.ok)throw new Error('Failed');
                 const data=await res.json();
                 categories=Array.isArray(data)?data:(data.data||[]);
@@ -4773,7 +4840,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
                     <code style="background:var(--bg-primary);padding:1px 6px;border-radius:3px;font-size:0.7rem;">${escHtml(node.slug)}</code>
                     <span class="status-badge" style="background:#E3F2FD;color:#0D47A1;font-size:0.7rem;padding:1px 8px;">${node.productCount||0}</span>
                     ${node.featured?'<span style="font-size:0.7rem;color:var(--gold);">★</span>':''}
-                    <span style="font-size:0.7rem;padding:1px 8px;border-radius:3px;background:${node.status==='published'?'#E8F5E9':'#FFEBEE'};color:${node.status==='published'?'#2E7D32':'#C62828';">${node.status||'published'}</span>
+                    <span style="font-size:0.7rem;padding:1px 8px;border-radius:3px;background:${node.status==='published'?'#E8F5E9':'#FFEBEE'};color:${node.status==='published'?'#2E7D32':'#C62828'};">${node.status||'published'}</span>
                     <div style="margin-left:auto;display:flex;gap:4px;">
                         <button class="cat-edit-btn" data-id="${node._id}" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:0.85rem;padding:2px 5px;" title="Edit"><i class="fas fa-edit"></i></button>
                         <button class="cat-delete-btn" data-id="${node._id}" style="background:none;border:none;color:var(--error);cursor:pointer;font-size:0.85rem;padding:2px 5px;" title="Delete"><i class="fas fa-trash-alt"></i></button>
@@ -4846,7 +4913,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
             document.getElementById('catTabletBannerPreview').innerHTML=c.tabletBanner?`<img src="${c.tabletBanner}" style="width:80px;height:50px;border-radius:6px;object-fit:cover;">`:'';
             // Populate parent select
             populateCategorySelect();
-            document.getElementById('categoryParent').value=c.parent?.(._id||c.parent)||'';
+            document.getElementById('categoryParent').value=c.parent?._id||c.parent||'';
             document.getElementById('categoryFormModal').classList.add('show');
         }
         // Category image upload helper
@@ -4914,7 +4981,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
                 canonicalUrl:document.getElementById('catCanonicalUrl').value.trim()
             };
             if(!data.name){showToast('Category name is required.');return;}
-            try{const url=id?`${API_URL}/categories/${id}`:`${API_URL}/categories`;const method=id?'PUT':'POST';const res=await fetch(url,{method,headers:getHeaders(),body:JSON.stringify(data)});const r=await res.json();if(!res.ok)throw new Error(r.message||'Failed');showToast(id?'Category updated':'Category added');document.getElementById('categoryFormModal').classList.remove('show');await loadCategories();}catch(err){showToast(err.message);}
+            try{const url=id?`${API_URL}/categories/${id}`:`${API_URL}/categories`;const method=id?'PUT':'POST';const res=await safeFetch(url,{method,headers:getHeaders(),body:JSON.stringify(data)});const r=await res.json();if(!res.ok)throw new Error(r.message||'Failed');showToast(id?'Category updated':'Category added');document.getElementById('categoryFormModal').classList.remove('show');await loadCategories();}catch(err){showToast(err.message);}
         });
         // Category event listeners
         document.getElementById('selectAllCategories')?.addEventListener('change',function(){const cbs=document.querySelectorAll('.cat-checkbox');cbs.forEach(cb=>{cb.checked=this.checked;if(this.checked)catSelectedIds.add(cb.dataset.id);else catSelectedIds.delete(cb.dataset.id);});updateCatBulkActions();});
@@ -4966,10 +5033,24 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
         let ordSearchDebounceTimer = null;
 
         function escStatus(s) { return s ? s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : ''; }
+        function downloadCsv(headers, rows, filename) {
+            const csvContent = [headers.join(','), ...rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(','))].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename || 'export.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        document.getElementById('orderSearchInput')?.addEventListener('input', function() { clearTimeout(ordSearchDebounceTimer); ordSearchDebounceTimer = setTimeout(() => { ordersPage = 1; loadOrders(); }, 400); });
+        document.getElementById('orderStatusFilter')?.addEventListener('change', function() { ordersPage = 1; loadOrders(); });
+        document.getElementById('orderPaymentFilter')?.addEventListener('change', function() { ordersPage = 1; loadOrders(); });
+        document.getElementById('orderSort')?.addEventListener('change', function() { ordersPage = 1; loadOrders(); });
 
         async function loadOrderStats() {
             try {
-                const res = await fetch(`${API_URL}/orders/admin/statistics`, { headers: getHeaders() });
+                const res = await safeFetch(`${API_URL}/orders/admin/statistics`, { headers: getHeaders() });
                 if (!res.ok) return;
                 const d = await res.json();
                 if (!d.success || !d.data) return;
@@ -5019,7 +5100,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
             if (payment) params.set('paymentStatus', payment);
             if (sort) params.set('sort', sort);
             try {
-                const res = await fetch(`${API_URL}/orders/admin/all?${params}`, { headers: getHeaders() });
+                const res = await safeFetch(`${API_URL}/orders/admin/all?${params}`, { headers: getHeaders() });
                 if (!res.ok) throw new Error('Failed');
                 const d = await res.json();
                 ordersData = d.data || [];
@@ -5094,7 +5175,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
         }
         async function loadOrderDetail(orderId) {
             try {
-                const res = await fetch(`${API_URL}/orders/admin/${orderId}`, { headers: getHeaders() });
+                const res = await safeFetch(`${API_URL}/orders/admin/${orderId}`, { headers: getHeaders() });
                 if (!res.ok) throw new Error('Failed');
                 const d = await res.json();
                 if (!d.success || !d.data) throw new Error('Not found');
@@ -5223,7 +5304,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
                 if (note) body.note = note;
                 if (trackingNumber) body.trackingNumber = trackingNumber;
                 if (courier) body.courier = courier;
-                const res = await fetch(`${API_URL}/orders/${orderId}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(body) });
+                const res = await safeFetch(`${API_URL}/orders/${orderId}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(body) });
                 if (!res.ok) throw new Error('Update failed');
                 showToast('Order updated');
                 document.getElementById('orderDetailModal').classList.remove('show');
@@ -5246,7 +5327,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
             const newTx = parts[1] || tx;
             const newRef = parts[2] || ref;
             if (!['pending', 'completed', 'failed', 'refunded', 'partially_refunded'].includes(newStatus)) { showToast('Invalid status'); return; }
-            fetch(`${API_URL}/orders/${orderId}/payment`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ paymentStatus: newStatus, transactionId: newTx, paymentRef: newRef }) })
+            safeFetch(`${API_URL}/orders/${orderId}/payment`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ paymentStatus: newStatus, transactionId: newTx, paymentRef: newRef }) })
                 .then(r => r.json()).then(d => { if (d.success) { showToast('Payment updated'); loadOrders(); loadDashboardData(); } else showToast(d.message || 'Failed'); })
                 .catch(() => showToast('Failed'));
         }
@@ -5265,7 +5346,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
             const val = prompt('Update tracking (format: trackingNumber|courier|ETA_date):\n\nCurrent: ' + track + ' | ' + courier + ' | ' + eta, track + '|' + courier + '|' + eta);
             if (!val) return;
             const parts = val.split('|').map(s => s.trim());
-            fetch(`${API_URL}/orders/${orderId}/tracking`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ trackingNumber: parts[0] || track, courier: parts[1] || courier, estDeliveryDate: parts[2] || undefined }) })
+            safeFetch(`${API_URL}/orders/${orderId}/tracking`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ trackingNumber: parts[0] || track, courier: parts[1] || courier, estDeliveryDate: parts[2] || undefined }) })
                 .then(r => r.json()).then(d => { if (d.success) { showToast('Tracking updated'); loadOrders(); } else showToast(d.message || 'Failed'); })
                 .catch(() => showToast('Failed'));
         }
@@ -5278,7 +5359,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
         async function processRefund(orderId, refundStatus) {
             const note = prompt(`Add a note for this refund (${refundStatus}):`);
             try {
-                const res = await fetch(`${API_URL}/orders/${orderId}/refund`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ refundStatus, note }) });
+                const res = await safeFetch(`${API_URL}/orders/${orderId}/refund`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ refundStatus, note }) });
                 if (!res.ok) throw new Error('Failed');
                 showToast(`Refund ${refundStatus}`);
                 document.getElementById('orderDetailModal').classList.remove('show');
@@ -5290,7 +5371,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
             const reason = prompt('Enter return reason:');
             if (reason === null) return;
             try {
-                const res = await fetch(`${API_URL}/orders/${orderId}/return`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ reason, note: 'Return processed by admin' }) });
+                const res = await safeFetch(`${API_URL}/orders/${orderId}/return`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ reason, note: 'Return processed by admin' }) });
                 if (!res.ok) throw new Error('Failed');
                 showToast('Return processed');
                 document.getElementById('orderDetailModal').classList.remove('show');
@@ -5309,7 +5390,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
             const note = document.getElementById('bulkOrderNote').value.trim();
             const ids = Array.from(selectedOrderIds);
             try {
-                const res = await fetch(`${API_URL}/orders/admin/bulk`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ orderIds: ids, action, value, note }) });
+                const res = await safeFetch(`${API_URL}/orders/admin/bulk`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ orderIds: ids, action, value, note }) });
                 const d = await res.json();
                 if (!d.success) throw new Error(d.message || 'Failed');
                 showToast(d.message || 'Bulk action done');
@@ -5322,17 +5403,37 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
         async function exportOrdersCSV() {
             const status = document.getElementById('orderStatusFilter').value;
             const search = document.getElementById('orderSearchInput').value;
-            let url = `${API_URL}/orders/export?`;
-            if (status) url += `status=${status}&`;
-            if (search) url += `search=${encodeURIComponent(search)}&`;
-            window.open(url, '_blank');
+            try {
+                const res = await safeFetch(`${API_URL}/orders/admin/all?limit=10000${status ? '&status=' + status : ''}${search ? '&search=' + encodeURIComponent(search) : ''}`, { headers: getHeaders() });
+                if (!res.ok) throw new Error('Failed');
+                const d = await res.json();
+                const orders = d.data || [];
+                const headers = ['Order #', 'Customer', 'Email', 'Phone', 'Items', 'Subtotal', 'Delivery', 'Discount', 'Total', 'Payment', 'Status', 'Tracking', 'Date'];
+                const rows = orders.map(o => [
+                    o.orderNumber || o._id?.toString().slice(-6) || '',
+                    o.shippingAddress?.fullName || o.user?.name || '',
+                    o.email || o.user?.email || '',
+                    o.shippingAddress?.phone || '',
+                    (o.items || []).length + ' item(s)',
+                    o.subtotal || 0,
+                    o.deliveryFee || 0,
+                    o.discount || o.couponDiscount || 0,
+                    o.total || 0,
+                    o.paymentDetails?.paymentStatus || 'pending',
+                    o.status || '',
+                    o.trackingNumber || '',
+                    o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ''
+                ]);
+                downloadCsv(headers, rows, `orders-export-${new Date().toISOString().split('T')[0]}.csv`);
+                showToast('Orders exported');
+            } catch (err) { showToast('Export failed'); }
         }
 
         async function exportOrdersJSON() {
             const status = document.getElementById('orderStatusFilter').value;
             const search = document.getElementById('orderSearchInput').value;
             try {
-                const res = await fetch(`${API_URL}/orders/export`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ status: status || undefined, search: search || undefined, format: 'json' }) });
+                const res = await safeFetch(`${API_URL}/orders/admin/all?limit=10000${status ? '&status=' + status : ''}${search ? '&search=' + encodeURIComponent(search) : ''}`, { headers: getHeaders() });
                 const d = await res.json();
                 if (!d.success || !d.data) throw new Error('Failed');
                 const headers = ['Order #', 'Customer', 'Email', 'Phone', 'Items', 'Subtotal', 'Delivery', 'Discount', 'Total', 'Payment', 'Status', 'Courier', 'Tracking', 'Date'];
@@ -5349,7 +5450,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
         }
         async function loadOrderDetailForPrint(orderId) {
             try {
-                const res = await fetch(`${API_URL}/orders/admin/${orderId}`, { headers: getHeaders() });
+                const res = await safeFetch(`${API_URL}/orders/admin/${orderId}`, { headers: getHeaders() });
                 if (!res.ok) throw new Error('Failed');
                 const d = await res.json();
                 if (d.success && d.data) printOrderDoc(d.data, 'Invoice');
@@ -5395,7 +5496,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
                 <div class="summary"><div>Subtotal: Ksh ${(order.subtotal || 0).toLocaleString()}</div><div>Delivery: ${order.deliveryFee ? 'Ksh ' + order.deliveryFee.toLocaleString() : 'Free'}</div>${order.discount ? '<div>Discount: -Ksh ' + order.discount.toLocaleString() + '</div>' : ''}<div class="grand">Total: Ksh ${(order.total || 0).toLocaleString()}</div></div>
                 <div style="margin-top:20px;font-size:12px;"><strong>Payment:</strong> ${escHtml(order.paymentMethod || 'N/A')} (${escHtml(order.paymentDetails?.paymentStatus || 'pending')})</div>
                 <div class="footer">Generated on ${new Date().toLocaleString()} | Trendy Wardrobe</div>
-                <script>window.print();setTimeout(function(){window.close();},1000);<\/script>
+                <script>window.print();setTimeout(function(){window.close();},1000);<\/script>`);
         }
 
         /* ====================== PROMOTIONS MANAGEMENT ====================== */
@@ -7854,9 +7955,12 @@ function showHeroSlideForm(slide) {
     const title = document.getElementById('heroSlideFormTitle');
     document.getElementById('heroSlideId').value = slide ? slide._id : '';
     document.getElementById('heroSlideHeading').value = slide ? slide.heading : '';
-    document.getElementById('heroSlideSubheading').value = slide ? slide.subheading : '';
-    document.getElementById('heroSlideBtnText').value = slide ? (slide.buttonText || 'Shop Now') : 'Shop Now';
-    document.getElementById('heroSlideBtnLink').value = slide ? (slide.buttonLink || '/products') : '/products';
+    document.getElementById('heroSlideSubheading').value = slide ? (slide.subheading || '') : '';
+    document.getElementById('heroSlideDescription').value = slide ? (slide.description || '') : '';
+    document.getElementById('heroSlideBtnText').value = slide ? (slide.primaryCtaText || slide.buttonText || 'Shop Now') : 'Shop Now';
+    document.getElementById('heroSlideBtnLink').value = slide ? (slide.primaryCtaUrl || slide.buttonLink || '/products') : '/products';
+    document.getElementById('heroSlideSecondaryCtaText').value = slide ? (slide.secondaryCtaText || '') : '';
+    document.getElementById('heroSlideSecondaryCtaLink').value = slide ? (slide.secondaryCtaUrl || '') : '';
     document.getElementById('heroSlideOrder').value = slide ? (slide.displayOrder || 0) : 0;
     document.getElementById('heroSlideActive').checked = slide ? slide.active !== false : true;
     document.getElementById('heroDesktopImageUrl').value = slide ? (slide.desktopImage || '') : '';
@@ -7871,7 +7975,7 @@ async function loadHeroSlides() {
     const list = document.getElementById('heroSlidesList');
     if (!list) return;
     try {
-        const res = await fetch(`${API_URL}/homepage`, { headers: getHeaders() });
+        const res = await safeFetch(`${API_URL}/homepage`, { headers: getHeaders() });
         if (!res.ok) throw new Error('Failed to load');
         const d = await res.json();
         heroSlidesData = (d.data && d.data.heroSlides) || [];
@@ -7887,6 +7991,8 @@ async function loadHeroSlides() {
                 <div style="flex:1;min-width:0;">
                     <div style="font-weight:600;">${escHtml(s.heading || 'Untitled')}</div>
                     <div style="font-size:0.8rem;color:var(--text-muted);">${escHtml(s.subheading || '')}</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px;">${escHtml((s.description || '').substring(0, 60))}${(s.description || '').length > 60 ? '...' : ''}</div>
+                    <div style="font-size:0.7rem;color:var(--text-secondary);margin-top:2px;">CTA: ${escHtml(s.primaryCtaText || s.buttonText || '—')} → ${escHtml(s.primaryCtaUrl || s.buttonLink || '—')}${s.secondaryCtaText ? ' | ' + escHtml(s.secondaryCtaText) + ' → ' + escHtml(s.secondaryCtaUrl || '') : ''}</div>
                     <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">Order: ${s.displayOrder || 0} | ${s.active !== false ? '<span style="color:#16a34a;">Active</span>' : '<span style="color:#dc2626;">Inactive</span>'}</div>
                 </div>
                 <div style="display:flex;gap:6px;flex-shrink:0;">
@@ -7953,8 +8059,13 @@ document.addEventListener('DOMContentLoaded', () => {
             mobileImage: document.getElementById('heroMobileImageUrl').value || '',
             heading,
             subheading: document.getElementById('heroSlideSubheading').value || '',
+            description: document.getElementById('heroSlideDescription').value || '',
             buttonText: document.getElementById('heroSlideBtnText').value || 'Shop Now',
             buttonLink: document.getElementById('heroSlideBtnLink').value || '/products',
+            primaryCtaText: document.getElementById('heroSlideBtnText').value || 'Shop Now',
+            primaryCtaUrl: document.getElementById('heroSlideBtnLink').value || '/products',
+            secondaryCtaText: document.getElementById('heroSlideSecondaryCtaText').value || '',
+            secondaryCtaUrl: document.getElementById('heroSlideSecondaryCtaLink').value || '',
             displayOrder: parseInt(document.getElementById('heroSlideOrder').value) || 0,
             active: document.getElementById('heroSlideActive').checked
         };
