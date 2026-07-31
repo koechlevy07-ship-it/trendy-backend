@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://cdn.vercel-insights.com https://vercel.live https://maps.googleapis.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: https://res.cloudinary.com https://placehold.co blob: https://maps.googleapis.com https://maps.gstatic.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com; connect-src 'self' https://trendy-backend-jq27.onrender.com https://api.cloudinary.com https://cdn.vercel-insights.com https://vercel.live https://maps.googleapis.com https://www.google-analytics.com https://www.google.com; frame-src https://www.google.com https://www.google.com/maps https://vercel.live; worker-src 'self';" />
     <title>Product Details — Trendy Wardrobe | Luxury Fashion</title>
     <meta name="description" content="View product details, reviews, and specifications. Shop premium fashion from Trendy Wardrobe." />
     <meta name="robots" content="index, follow" />
     <meta property="og:title" content="Product — Trendy Wardrobe" />
     <meta property="og:description" content="View product details and shop premium fashion." />
     <meta property="og:type" content="product" />
+    <meta property="og:url" content="https://trendy-frontend-ashen.vercel.app/product-details.html" />
     <meta property="og:site_name" content="Trendy Wardrobe" />
-    <meta property="og:image" content="/assets/images/logo-icon.svg" />
+    <meta property="og:image" content="https://trendy-frontend-ashen.vercel.app/assets/images/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://trendy-frontend-ashen.vercel.app/assets/images/og-image.png" />
     <link rel="canonical" href="https://trendy-frontend-ashen.vercel.app/product-details.html" />
     <link rel="icon" type="image/svg+xml" href="/assets/images/logo-icon.svg" />
     <link rel="apple-touch-icon" href="/assets/images/logo-icon.svg" />
@@ -26,13 +29,118 @@
             thumbnailTransform: 'f_auto,q_auto,w_400,h_400,c_fill,g_auto'
         };
     </script>
+    <script>
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var id = params.get('id');
+            if (id) {
+                var base = 'https://trendy-frontend-ashen.vercel.app/product-details.html?id=' + encodeURIComponent(id);
+                var canonical = document.querySelector('link[rel="canonical"]');
+                if (canonical) canonical.href = base;
+                var ogUrl = document.querySelector('meta[property="og:url"]');
+                if (ogUrl) ogUrl.setAttribute('content', base);
+            }
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Great+Vibes&family=Oswald:wght@400;700&family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://trendy-backend-jq27.onrender.com" crossorigin />
+    <link rel="dns-prefetch" href="https://trendy-backend-jq27.onrender.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Great+Vibes&family=Oswald:wght@400;700&family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Great+Vibes&family=Oswald:wght@400;700&family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" /></noscript>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="/css/styles.css" />
     <link rel="stylesheet" href="/css/product-details.css" />
+    <!-- NUCLEAR: Inline critical CSS — cannot be cached by SW -->
+    <style>
+        html { overflow-x: hidden !important; }
+        body { overflow-x: hidden !important; }
+        @media (max-width: 768px) {
+            html, body { overflow-x: hidden !important; }
+            .pd-grid {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 20px !important;
+                padding: 0 0 24px !important;
+                overflow-x: hidden !important;
+            }
+            .pd-gallery {
+                position: static !important;
+                width: 100% !important;
+            }
+            .pd-main-image-wrap {
+                border-radius: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                aspect-ratio: auto !important;
+                background: #f5f5f5 !important;
+                overflow: hidden !important;
+            }
+            .pd-main-image {
+                width: 100% !important;
+                height: auto !important;
+                max-height: 80vh !important;
+                object-fit: contain !important;
+                background: #f5f5f5 !important;
+            }
+            .pd-zoom-lens, .pd-zoom-result { display: none !important; }
+            .pd-gallery-btn { display: none !important; }
+            .pd-gallery-indicator { display: flex !important; }
+            .pd-tabs-content { overflow-x: hidden !important; }
+            .pd-tabs-section { overflow-x: hidden !important; max-width: 100% !important; }
+            .pd-desc-content, .pd-static-content, .pd-size-guide-content {
+                max-width: 100% !important;
+                overflow-wrap: break-word !important;
+                word-break: break-word !important;
+            }
+            .pd-specs-table, .pd-size-table { max-width: 100% !important; }
+            .pd-main-image-wrap { cursor: pointer !important; -webkit-tap-highlight-color: transparent; }
+            .pd-btn-add-cart, .pd-btn-buy-now { width: 100% !important; }
+            .pd-actions { flex-direction: column !important; }
+            .pd-mobile-bar {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                z-index: 999 !important;
+                background: #fff !important;
+                border-top: 1px solid #e8e8e8 !important;
+                box-shadow: 0 -2px 12px rgba(0,0,0,0.08) !important;
+                padding: 10px 16px !important;
+                padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+                gap: 12px !important;
+            }
+            .pd-mobile-bar .pd-mobile-bar-price {
+                font-size: 1.2rem !important;
+                font-weight: 700 !important;
+                color: #C8A35A !important;
+                white-space: nowrap !important;
+            }
+            .pd-mobile-bar .pd-mobile-bar-btn {
+                flex: 1 !important;
+                padding: 12px 20px !important;
+                background: #C8A35A !important;
+                color: #fff !important;
+                border: none !important;
+                border-radius: 8px !important;
+                font-size: 0.85rem !important;
+                font-weight: 700 !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.5px !important;
+                cursor: pointer !important;
+                font-family: inherit !important;
+                text-align: center !important;
+            }
+            .pd-main { padding-bottom: 80px !important; }
+        }
+        @media (max-width: 480px) {
+            .pd-main-image { max-height: 75vh !important; }
+        }
+    </style>
 </head>
 <body>
 
@@ -142,12 +250,12 @@
 
     <!-- MOBILE SEARCH OVERLAY -->
     <div class="search-overlay" id="searchOverlay">
-        <button class="search-close" id="searchClose"><i class="fas fa-times"></i></button>
+        <button class="search-close" id="searchClose" aria-label="Close search"><i class="fas fa-times"></i></button>
         <div class="search-panel">
             <div class="search-input-wrap">
                 <i class="fas fa-search search-input-icon"></i>
                 <input type="text" id="searchOverlayInput" placeholder="Search trench coats, shoes, wardrobe..." autocomplete="off" />
-                <button class="search-submit" id="searchOverlaySubmit"><i class="fas fa-arrow-right"></i></button>
+                <button class="search-submit" id="searchOverlaySubmit" aria-label="Search"><i class="fas fa-arrow-right"></i></button>
             </div>
         </div>
         <div class="search-results-area" id="searchResultsArea">
@@ -249,6 +357,11 @@
 
         <!-- Product Content (hidden until loaded) -->
         <div class="pd-content" id="pdContent" style="display:none;">
+
+            <!-- BACK NAVIGATION -->
+            <div class="container">
+                <a href="/" class="pd-back-link" onclick="if(document.referrer && document.referrer.includes(window.location.hostname)){event.preventDefault();history.back();}"><i class="fas fa-arrow-left"></i> Back to Shop</a>
+            </div>
 
             <!-- BREADCRUMB -->
             <div class="container pd-breadcrumb-wrap">
@@ -693,7 +806,7 @@
     <!-- MINI CART -->
     <div class="mini-cart-overlay" id="miniCartOverlay">
         <div class="mini-cart">
-            <div class="cart-header"><h2>Your Cart</h2><button class="close-cart" id="closeCart"><i class="fas fa-times"></i></button></div>
+            <div class="cart-header"><h2>Your Cart</h2><button class="close-cart" id="closeCart" aria-label="Close cart"><i class="fas fa-times"></i></button></div>
             <div id="cartItemsContainer"></div>
             <div id="cartTotalContainer" style="display:none;">
                 <div class="cart-total"><span>Total</span><span class="total-price" id="cartTotalPrice">Ksh 0</span></div>
@@ -709,7 +822,7 @@
     <!-- CHECKOUT MODAL -->
     <div class="checkout-modal-overlay" id="checkoutOverlay">
         <div class="checkout-modal">
-            <button class="close-checkout" id="checkoutCloseBtn"><i class="fas fa-times"></i></button>
+            <button class="close-checkout" id="checkoutCloseBtn" aria-label="Close checkout"><i class="fas fa-times"></i></button>
             <h2>Checkout</h2>
             <form id="checkoutForm">
                 <div class="form-group"><label>Full Name *</label><input type="text" id="checkoutName" required style="padding:14px 16px;font-size:1rem;border-radius:8px;" /></div>
@@ -817,6 +930,26 @@
         </div>
     </nav>
 
-    <script src="/js/product-details.js"></script>
+    <!-- MOBILE IMAGE LIGHTBOX -->
+    <div class="pd-lightbox" id="pdLightbox" aria-hidden="true" role="dialog" aria-label="Fullscreen image viewer">
+        <div class="pd-lightbox-overlay" id="pdLightboxOverlay"></div>
+        <button class="pd-lightbox-close" id="pdLightboxClose" aria-label="Close"><i class="fas fa-times"></i></button>
+        <div class="pd-lightbox-counter" id="pdLightboxCounter">1 / 1</div>
+        <div class="pd-lightbox-track" id="pdLightboxTrack"></div>
+        <button class="pd-lightbox-prev" id="pdLightboxPrev" aria-label="Previous image"><i class="fas fa-chevron-left"></i></button>
+        <button class="pd-lightbox-next" id="pdLightboxNext" aria-label="Next image"><i class="fas fa-chevron-right"></i></button>
+    </div>
+
+    <!-- STICKY MOBILE BOTTOM BAR (Jumia-style) -->
+    <div class="pd-mobile-bar" id="pdMobileBar">
+        <div class="pd-mobile-bar-price" id="pdMobilePrice"></div>
+        <button class="pd-mobile-bar-btn" id="pdMobileAddToCart" onclick="document.getElementById('pdAddToCart').click()">
+            <i class="fas fa-shopping-bag"></i> Add to Cart
+        </button>
+    </div>
+
+    <script src="/js/vendor/purify.min.js" defer></script>
+    <script src="/js/image-utils.js"></script>
+    <script src="/js/product-details.js" defer></script>
 </body>
 </html>
