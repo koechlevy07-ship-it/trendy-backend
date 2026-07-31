@@ -12,6 +12,24 @@ function escHtml(str) {
 
 function $(id) { return document.getElementById(id); }
 
+function getEffectiveStock(product) {
+    if (product.soldOut) return 0;
+    if (product.stock > 0) return product.stock;
+    if (product.limitedAvailable && product.limitedPieces > 0) return product.limitedPieces;
+    if (product.preOrder) return 999;
+    if (product.inStock) return product.stockThreshold || 5;
+    return 0;
+}
+
+function isProductAvailable(product) {
+    if (product.soldOut) return false;
+    if (product.stock > 0) return true;
+    if (product.limitedAvailable && product.limitedPieces > 0) return true;
+    if (product.preOrder) return true;
+    if (product.inStock) return true;
+    return false;
+}
+
 function getImageUrl(path, width) {
     if (!path) return '';
     let url = path.startsWith('http') ? path : path;
@@ -998,7 +1016,7 @@ $('checkoutForm')?.addEventListener('submit', async function(e) {
             const res = await fetch(`${API_URL}/products/${item.id}`);
             const raw = await res.json();
             const p = raw.data || raw;
-            if (p.stock !== undefined && p.stock < (item.quantity || 1)) {
+            if (getEffectiveStock(p) < (item.quantity || 1)) {
                 showToast(`Insufficient stock for ${p.name}`, 'error');
                 btn.disabled = false; btn.textContent = 'Place Order'; return;
             }

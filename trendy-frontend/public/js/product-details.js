@@ -5,6 +5,25 @@
 // ---- CONFIG ----
 const API_URL = 'https://trendy-backend-jq27.onrender.com/api';
 
+// ---- Stock Helpers ----
+function getEffectiveStock(product) {
+    if (product.soldOut) return 0;
+    if (product.stock > 0) return product.stock;
+    if (product.limitedAvailable && product.limitedPieces > 0) return product.limitedPieces;
+    if (product.preOrder) return 999;
+    if (product.inStock) return product.stockThreshold || 5;
+    return 0;
+}
+
+function isProductAvailable(product) {
+    if (product.soldOut) return false;
+    if (product.stock > 0) return true;
+    if (product.limitedAvailable && product.limitedPieces > 0) return true;
+    if (product.preOrder) return true;
+    if (product.inStock) return true;
+    return false;
+}
+
 // ---- XSS ----
 function escHtml(str) {
     if (str == null) return '';
@@ -245,7 +264,7 @@ function renderMiniProductCard(product) {
             <div class="product-image-wrap">
                 <img src="${img}" alt="${escHtml(product.name)}" loading="lazy" />
                 ${discount ? `<span class="badge-discount">-${discount}%</span>` : ''}
-                ${product.stock !== undefined && product.stock < 1 ? '<span class="badge-out">Out of Stock</span>' : ''}
+                ${getEffectiveStock(product) < 1 ? '<span class="badge-out">Out of Stock</span>' : ''}
                 ${product.isNewArrival ? '<span class="badge-new">New</span>' : ''}
             </div>
             <div class="product-info">
@@ -427,18 +446,19 @@ function renderProduct(p) {
 
     // Stock
     const stockEl = $('pdStock');
+    const effStock = getEffectiveStock(p);
     if (!inStock) {
         stockEl.className = 'pd-stock out-of-stock';
         stockEl.innerHTML = '<i class="fas fa-times-circle"></i> Out of Stock';
         $('pdAddToCart').disabled = true;
         $('pdBuyNow').disabled = true;
-    } else if (p.stock !== undefined && p.stock <= 5) {
+    } else if (effStock <= 5) {
         stockEl.className = 'pd-stock low-stock';
-        stockEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> Only ${p.stock} left in stock`;
+        stockEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> Only ${effStock} left in stock`;
     } else {
         stockEl.className = 'pd-stock in-stock';
         stockEl.innerHTML = '<i class="fas fa-check-circle"></i> In Stock';
-        if (p.stock !== undefined) stockEl.innerHTML += ` &mdash; ${p.stock} available`;
+        stockEl.innerHTML += ` &mdash; ${effStock} available`;
     }
 
     // Delivery info
@@ -1416,7 +1436,7 @@ document.getElementById('checkoutForm').addEventListener('submit', async functio
             const res = await fetch(`${API_URL}/products/${item.id}`);
             const raw = await res.json();
             const p = raw.data || raw;
-            if (p.stock !== undefined && p.stock < (item.quantity || 1)) {
+            if (getEffectiveStock(p) < (item.quantity || 1)) {
                 showToast(`Insufficient stock for ${p.name}`, 'error');
                 btn.disabled = false;
                 btn.textContent = 'Place Order';
