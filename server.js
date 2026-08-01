@@ -69,7 +69,6 @@ app.use('/api', (req, res, next) => {
   if (req.headers.authorization) return authLimiter(req, res, next);
   return limiter(req, res, next);
 });
-app.use('/api', limiter);
 
 app.get('/api/health', (req, res) => {
   const dbState = mongoose.connection.readyState;
