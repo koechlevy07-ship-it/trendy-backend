@@ -137,6 +137,73 @@ const couponSchema = Joi.object({
     active: Joi.boolean().optional()
 });
 
+// RBAC schemas
+const adminUserCreateSchema = Joi.object({
+    name: Joi.string().trim().min(2).max(100).required(),
+    email: Joi.string().email().lowercase().required(),
+    password: Joi.string().min(6).max(128).required(),
+    username: Joi.string().trim().min(2).max(50).optional().allow(''),
+    phone: Joi.string().trim().max(20).optional().allow(''),
+    department: Joi.string().optional().allow('', null),
+    roleId: Joi.string().optional().allow('', null),
+    profilePhoto: Joi.string().optional().allow('', null),
+    notes: Joi.string().optional().allow('', null)
+});
+
+const adminUserUpdateSchema = Joi.object({
+    name: Joi.string().trim().min(2).max(100).optional(),
+    email: Joi.string().email().lowercase().optional(),
+    password: Joi.string().min(6).max(128).optional().allow(''),
+    username: Joi.string().trim().min(2).max(50).optional().allow(''),
+    phone: Joi.string().trim().max(20).optional().allow(''),
+    department: Joi.string().optional().allow('', null),
+    roleId: Joi.string().optional().allow('', null),
+    status: Joi.string().valid('active', 'suspended', 'blocked', 'pending_verification').optional(),
+    profilePhoto: Joi.string().optional().allow('', null),
+    notes: Joi.string().optional().allow('', null)
+}).min(1);
+
+const roleSchema = Joi.object({
+    name: Joi.string().trim().min(2).max(100).required(),
+    slug: Joi.string().trim().min(2).max(100).optional(),
+    description: Joi.string().trim().max(500).optional().allow(''),
+    permissions: Joi.array().items(Joi.object({
+        module: Joi.string().trim().required(),
+        actions: Joi.array().items(Joi.string().trim()).default([])
+    })).optional(),
+    isDefault: Joi.boolean().optional(),
+    isSystem: Joi.boolean().optional(),
+    priority: Joi.number().integer().optional()
+});
+
+const departmentSchema = Joi.object({
+    name: Joi.string().trim().min(2).max(100).required(),
+    description: Joi.string().trim().max(500).optional().allow(''),
+    managerId: Joi.string().optional().allow('', null),
+    parentDepartment: Joi.string().optional().allow('', null),
+    isActive: Joi.boolean().optional(),
+    color: Joi.string().optional().allow(''),
+    icon: Joi.string().optional().allow('')
+});
+
+const securityPolicySchema = Joi.object({
+    passwordMinLength: Joi.number().integer().min(6).max(64).optional(),
+    passwordRequireUppercase: Joi.boolean().optional(),
+    passwordRequireLowercase: Joi.boolean().optional(),
+    passwordRequireNumber: Joi.boolean().optional(),
+    passwordRequireSpecial: Joi.boolean().optional(),
+    sessionTimeoutMinutes: Joi.number().integer().min(1).optional(),
+    maxLoginAttempts: Joi.number().integer().min(1).optional(),
+    accountLockoutMinutes: Joi.number().integer().min(1).optional(),
+    jwtExpiration: Joi.string().optional().allow(''),
+    maxSessionsPerUser: Joi.number().integer().min(1).optional(),
+    enforceTwoFactor: Joi.boolean().optional(),
+    ipWhitelist: Joi.array().items(Joi.string()).optional(),
+    maintenanceMode: Joi.boolean().optional(),
+    maintenanceMessage: Joi.string().optional().allow(''),
+    maintenanceAllowAdmin: Joi.boolean().optional()
+});
+
 module.exports = {
     validate,
     schemas: {
@@ -148,6 +215,12 @@ module.exports = {
         review: reviewSchema,
         qa: qaSchema,
         answer: answerSchema,
-        coupon: couponSchema
+        coupon: couponSchema,
+        adminUser: adminUserCreateSchema,
+        adminUserCreate: adminUserCreateSchema,
+        adminUserUpdate: adminUserUpdateSchema,
+        role: roleSchema,
+        department: departmentSchema,
+        securityPolicy: securityPolicySchema
     }
 };

@@ -280,7 +280,7 @@ async function checkVelocity(session, userId) {
     
     // Check orders in last hour
     const recentOrders = await Order.countDocuments({
-        userId: sessionUserId,
+        user: sessionUserId,
         createdAt: { $gte: oneHourAgo }
     });
     
@@ -298,7 +298,7 @@ async function checkVelocity(session, userId) {
     
     // Check orders in last day
     const dailyOrders = await Order.countDocuments({
-        userId: sessionUserId,
+        user: sessionUserId,
         createdAt: { $gte: oneDayAgo }
     });
     

@@ -82,7 +82,17 @@ const settingsSchema = new mongoose.Schema({
     kidsImage: { type: String, default: '' },
     announcementText: { type: String, default: '' },
     announcementEnabled: { type: Boolean, default: false },
-    googleAnalyticsId: { type: String, default: '' }
+    googleAnalyticsId: { type: String, default: '' },
+    sitemapXml: { type: String, default: '' },
+    sitemapGeneratedAt: { type: Date },
+    contactEmail: { type: String, default: '' },
+    vatRate: { type: Number, default: 0 },
+    backupHistory: { type: [{
+        date: { type: Date, default: Date.now },
+        status: { type: String, default: 'success' },
+        fileSize: { type: Number, default: 0 },
+        fileName: { type: String, default: '' }
+    }], default: [] }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Settings', settingsSchema);

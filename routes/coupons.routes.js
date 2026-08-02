@@ -341,6 +341,34 @@ router.post('/admin/bulk', authenticateToken, requireAdmin, async (req, res) => 
     }
 });
 
+// GET /api/coupons/my – customer's available coupons
+router.get('/my', authenticateToken, async (req, res) => {
+    try {
+        const now = new Date();
+        const coupons = await Coupon.find({
+            status: 'active',
+            startDate: { $lte: now },
+            endDate: { $gte: now },
+            $or: [
+                { customerEligibility: 'all' },
+                { customerEligibility: 'new', 'eligibleCustomers': { $in: [req.user._id] } },
+                { customerEligibility: 'returning', 'eligibleCustomers': { $nin: [req.user._id] } },
+                { customerEligibility: 'specific', eligibleCustomers: req.user._id }
+            ]
+        }).select('code name description discountType discountValue minCartValue maxDiscount').lean();
+        
+        // Filter out ones user already used (if one-time)
+        const available = coupons.filter(c => {
+            if (!c.oneTimeUse) return true;
+            return !c.usedBy.some(u => u.customer.equals(req.user._id));
+        });
+        
+        res.json({ success: true, data: available });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
 // GET /api/coupons/:id – single coupon (admin)
 router.get('/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
@@ -650,6 +678,23 @@ router.post('/promotions/admin/bulk', authenticateToken, requireAdmin, async (re
     }
 });
 
+// GET /api/promotions/active – active promotions for storefront
+router.get('/promotions/active', async (req, res) => {
+    try {
+        const now = new Date();
+        const promotions = await Promotion.find({
+            status: 'active',
+            startDate: { $lte: now },
+            endDate: { $gte: now }
+        }).sort({ priority: -1, startDate: 1 })
+        .select('name type badgeText badgeColor showCountdown startDate endDate rules couponCode');
+        
+        res.json({ success: true, data: promotions });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
 // GET /api/promotions/:id – single promotion
 router.get('/promotions/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
@@ -731,51 +776,6 @@ router.delete('/promotions/:id', authenticateToken, requireAdmin, async (req, re
 // ============================================================
 // PUBLIC CUSTOMER ROUTES
 // ============================================================
-
-// GET /api/coupons/my – customer's available coupons
-router.get('/my', authenticateToken, async (req, res) => {
-    try {
-        const now = new Date();
-        const coupons = await Coupon.find({
-            status: 'active',
-            startDate: { $lte: now },
-            endDate: { $gte: now },
-            $or: [
-                { customerEligibility: 'all' },
-                { customerEligibility: 'new', 'eligibleCustomers': { $in: [req.user._id] } },
-                { customerEligibility: 'returning', 'eligibleCustomers': { $nin: [req.user._id] } },
-                { customerEligibility: 'specific', eligibleCustomers: req.user._id }
-            ]
-        }).select('code name description discountType discountValue minCartValue maxDiscount').lean();
-        
-        // Filter out ones user already used (if one-time)
-        const available = coupons.filter(c => {
-            if (!c.oneTimeUse) return true;
-            return !c.usedBy.some(u => u.customer.equals(req.user._id));
-        });
-        
-        res.json({ success: true, data: available });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-});
-
-// GET /api/promotions/active – active promotions for storefront
-router.get('/promotions/active', async (req, res) => {
-    try {
-        const now = new Date();
-        const promotions = await Promotion.find({
-            status: 'active',
-            startDate: { $lte: now },
-            endDate: { $gte: now }
-        }).sort({ priority: -1, startDate: 1 })
-        .select('name type badgeText badgeColor showCountdown startDate endDate rules couponCode');
-        
-        res.json({ success: true, data: promotions });
-    } catch (err) {
-        res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-});
 
 // POST /api/promotions/apply – apply automatic promotions to cart
 router.post('/promotions/apply', authenticateToken, async (req, res) => {

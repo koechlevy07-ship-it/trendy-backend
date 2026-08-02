@@ -15,6 +15,9 @@ const authenticateToken = async (req, res, next) => {
         if (!user) {
             return res.status(401).json({ success: false, message: 'User not found' });
         }
+        if (user.status && user.status !== 'active') {
+            return res.status(403).json({ success: false, message: `Account ${user.status}` });
+        }
         req.user = user;
         next();
     } catch (err) {

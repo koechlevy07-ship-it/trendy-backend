@@ -12,6 +12,7 @@ const checkPermission = (module, action) => async (req, res, next) => {
             }
             return next();
         }
+        if (!user.roleId) return res.status(403).json({ success: false, message: 'No role assigned' });
         const role = await Role.findById(user.roleId);
         if (!role) return res.status(403).json({ success: false, message: 'Role not found' });
         const perm = role.permissions.find(p => p.module === module);
@@ -28,6 +29,7 @@ const requireModuleAccess = (...modules) => async (req, res, next) => {
     try {
         const user = req.user;
         if (user.role === 'admin') return next();
+        if (!user.roleId) return res.status(403).json({ success: false, message: 'No role assigned' });
         const role = await Role.findById(user.roleId);
         if (!role) return res.status(403).json({ success: false, message: 'Role not found' });
         const hasAccess = modules.some(m => role.permissions.some(p => p.module === m && p.actions.includes('view')));

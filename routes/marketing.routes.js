@@ -1157,4 +1157,22 @@ router.post('/send-test', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
+// POST /api/marketing/test-email - Send a plain test email to a given address
+router.post('/test-email', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { email, subject, content } = req.body;
+        if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+        const result = await sendEmail({
+            to: email,
+            subject: subject || 'Test email from Trendy Wardrobe',
+            text: content || 'This is a test email from Trendy Wardrobe.',
+            html: `<p>${(content || 'This is a test email from Trendy Wardrobe.').replace(/\n/g, '<br>')}</p>`
+        });
+        res.json({ success: true, message: 'Test email sent', data: result });
+    } catch (err) {
+        console.error('Test email error:', err);
+        res.status(500).json({ success: false, message: 'Failed to send test email' });
+    }
+});
+
 module.exports = router;

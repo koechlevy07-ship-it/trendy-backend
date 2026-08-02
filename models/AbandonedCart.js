@@ -284,13 +284,19 @@ abandonedCartSchema.methods.cancel = function() {
 abandonedCartSchema.statics.findRecoverable = function(limit = 100) {
     return this.find({
         status: { $in: ['active', 'recovering'] },
-        $or: [
-            { 'recovery.emailsSent': { $lt: 3 } },
-            { 'recovery.emailsSent': { $exists: false } }
-        ],
-        $or: [
-            { expiredAt: { $exists: false } },
-            { expiredAt: { $gt: new Date() } }
+        $and: [
+            {
+                $or: [
+                    { 'recovery.emailsSent': { $lt: 3 } },
+                    { 'recovery.emailsSent': { $exists: false } }
+                ]
+            },
+            {
+                $or: [
+                    { expiredAt: { $exists: false } },
+                    { expiredAt: { $gt: new Date() } }
+                ]
+            }
         ]
     }).sort({ abandonedAt: 1 }).limit(limit);
 };

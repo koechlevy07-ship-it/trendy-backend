@@ -315,10 +315,12 @@ router.get('/slug/:slug', async (req, res) => {
     }
 });
 
-// GET /api/products/:id – single product by ID (public)
+// GET /api/products/:id – single product by ID (public only sees published; admin sees any)
 router.get('/:id', async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id);
+        const isAdmin = req.user && req.user.role === 'admin';
+        const filter = isAdmin ? { _id: req.params.id } : { _id: req.params.id, status: 'published' };
+        const product = await Product.findOne(filter);
         if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
         res.json({ success: true, data: product });
     } catch (err) {

@@ -50,7 +50,12 @@ const userSchema = new mongoose.Schema({
     },
     addresses: [addressSchema],
     resetPasswordToken: String,
-    resetPasswordExpires: Date
+    resetPasswordExpires: Date,
+    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorMethod: { type: String, enum: ['totp', 'sms', ''], default: '' },
+    twoFactorSecret: { type: String, default: '' },
+    twoFactorTempSecret: { type: String, default: '' },
+    twoFactorTempExpiry: { type: Date, default: null }
 }, { timestamps: true });
 
 userSchema.index({ email: 1 });

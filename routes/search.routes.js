@@ -89,11 +89,11 @@ router.get('/', async (req, res) => {
         
         // Availability filter
         if (availability === 'in-stock') {
-            match.$and = match.$and || [];
-            match.$and.push({ stock: { $gt: 0 } });
+            filter.$and = filter.$and || [];
+            filter.$and.push({ stock: { $gt: 0 } });
         } else if (availability === 'out-of-stock') {
-            match.$and = match.$and || [];
-            match.$and.push({ stock: 0 });
+            filter.$and = filter.$and || [];
+            filter.$and.push({ stock: 0 });
         }
         
         // Rating filter

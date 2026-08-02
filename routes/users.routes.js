@@ -285,6 +285,146 @@ router.put('/addresses/:addressId/default', authenticateToken, async (req, res) 
 });
 
 // ============================================================
+// ACCOUNT SECURITY — 2FA, DEVICES, LOGIN HISTORY (self-service)
+// ============================================================
+
+const Device = require('../models/Device');
+const LoginAttempt = require('../models/LoginAttempt');
+const { generateSecret, verifyTOTP, generateQRDataUrl } = require('../services/twoFactorService');
+
+// GET /api/users/2fa-status
+router.get('/2fa-status', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('twoFactorEnabled twoFactorMethod');
+        res.json({ success: true, data: { enabled: !!user?.twoFactorEnabled, method: user?.twoFactorMethod || 'none' } });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to load 2FA status' });
+    }
+});
+
+// POST /api/users/2fa/setup — begin 2FA setup
+router.post('/2fa/setup', authenticateToken, async (req, res) => {
+    try {
+        const { method } = req.body;
+        if (method !== 'totp') {
+            return res.status(400).json({ success: false, message: 'SMS 2FA is not configured. Use method "totp".' });
+        }
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        if (user.twoFactorEnabled) return res.status(400).json({ success: false, message: '2FA is already enabled' });
+
+        const secret = generateSecret();
+        user.twoFactorTempSecret = secret;
+        user.twoFactorTempExpiry = new Date(Date.now() + 10 * 60 * 1000);
+        await user.save();
+
+        const qrCode = await generateQRDataUrl(secret, user.email);
+        res.json({ success: true, data: { method: 'totp', qrCode, secret } });
+    } catch (err) {
+        console.error('2FA setup error:', err);
+        res.status(500).json({ success: false, message: 'Failed to start 2FA setup' });
+    }
+});
+
+// POST /api/users/2fa/verify — confirm a TOTP code and enable 2FA
+router.post('/2fa/verify', authenticateToken, async (req, res) => {
+    try {
+        const { code } = req.body;
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        if (!user.twoFactorTempSecret) return res.status(400).json({ success: false, message: 'No pending 2FA setup' });
+        if (user.twoFactorTempExpiry && user.twoFactorTempExpiry < new Date()) {
+            return res.status(400).json({ success: false, message: 'Setup code expired. Restart 2FA setup.' });
+        }
+        if (!verifyTOTP(user.twoFactorTempSecret, code)) {
+            return res.status(400).json({ success: false, message: 'Invalid verification code' });
+        }
+        user.twoFactorEnabled = true;
+        user.twoFactorMethod = 'totp';
+        user.twoFactorSecret = user.twoFactorTempSecret;
+        user.twoFactorTempSecret = '';
+        user.twoFactorTempExpiry = null;
+        await user.save();
+        res.json({ success: true, message: '2FA enabled successfully' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to enable 2FA' });
+    }
+});
+
+// POST /api/users/2fa/disable — turn off 2FA
+router.post('/2fa/disable', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        user.twoFactorEnabled = false;
+        user.twoFactorMethod = '';
+        user.twoFactorSecret = '';
+        user.twoFactorTempSecret = '';
+        user.twoFactorTempExpiry = null;
+        await user.save();
+        res.json({ success: true, message: '2FA disabled' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to disable 2FA' });
+    }
+});
+
+// GET /api/users/active-devices — registered devices for this user
+router.get('/active-devices', authenticateToken, async (req, res) => {
+    try {
+        const devices = await Device.find({ userId: req.user.id }).sort({ lastUsed: -1 }).limit(20).lean();
+        const currentUA = req.headers['user-agent'] || '';
+        const data = devices.map(d => ({
+            _id: d._id,
+            deviceName: d.name,
+            browser: d.browser,
+            os: d.os,
+            ip: d.ipAddress,
+            lastActive: d.lastUsed,
+            current: currentUA.includes(d.browser || '__none__')
+        }));
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to load devices' });
+    }
+});
+
+// GET /api/users/login-history — recent login attempts
+router.get('/login-history', authenticateToken, async (req, res) => {
+    try {
+        const attempts = await LoginAttempt.find({ userId: req.user.id }).sort({ attemptedAt: -1 }).limit(20).lean();
+        const data = attempts.map(a => ({
+            _id: a._id,
+            ip: a.ipAddress,
+            location: a.location,
+            device: a.device || a.browser,
+            success: a.success,
+            createdAt: a.attemptedAt || a.createdAt
+        }));
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to load login history' });
+    }
+});
+
+// GET /api/users/export-data — download personal data as JSON
+router.get('/export-data', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password -twoFactorSecret -twoFactorTempSecret');
+        const [orders, reviews, wishlist] = await Promise.all([
+            Order.find({ user: req.user.id }).select('-paymentDetails.providerResponse').lean(),
+            Review.find({ user: req.user.id }).lean(),
+            Wishlist.findOne({ user: req.user.id }).lean()
+        ]);
+        const payload = { profile: user.toObject(), orders, reviews, wishlist: wishlist?.items || [] };
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename=tw-data-${new Date().toISOString().split('T')[0]}.json`);
+        res.send(JSON.stringify(payload, null, 2));
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to export data' });
+    }
+});
+
+// ============================================================
 // ADMIN ENDPOINTS – Static paths before parameterized
 // ============================================================
 
