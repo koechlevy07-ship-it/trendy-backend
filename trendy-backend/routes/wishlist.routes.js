@@ -7,6 +7,13 @@ const Cart = require('../models/Cart');
 const { authenticateToken } = require('../middleware/auth');
 const crypto = require('crypto');
 
+function getEffectiveStock(product) {
+    if (product.stock > 0) return product.stock;
+    if (product.limitedAvailable && product.limitedPieces > 0) return product.limitedPieces;
+    if (product.preOrder) return 999;
+    return 0;
+}
+
 function isValidObjectId(id) {
     return mongoose.Types.ObjectId.isValid(id);
 }
@@ -21,7 +28,7 @@ router.get('/', authenticateToken, async (req, res) => {
             await wishlist.save();
         }
         const count = items.length;
-        const inStock = items.filter(i => i.productId && i.productId.stock > 0).length;
+        const inStock = items.filter(i => i.productId && getEffectiveStock(i.productId) > 0).length;
         const outOfStock = count - inStock;
         const estimatedValue = items.reduce((sum, i) => sum + (i.productId ? i.productId.price || 0 : 0), 0);
         res.json({ success: true, items, stats: { count, inStock, outOfStock, estimatedValue } });
@@ -182,7 +189,8 @@ router.post('/move-to-cart/:itemId', authenticateToken, async (req, res) => {
 
         const product = await Product.findById(item.productId);
         if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-        if (product.stock < 1) return res.status(400).json({ success: false, message: 'Product is out of stock' });
+        const available = getEffectiveStock(product);
+        if (available < 1) return res.status(400).json({ success: false, message: 'Product is out of stock' });
 
         let cart = await Cart.findOne({ userId: req.user.id });
         if (!cart) cart = new Cart({ userId: req.user.id, items: [] });
@@ -194,7 +202,7 @@ router.post('/move-to-cart/:itemId', authenticateToken, async (req, res) => {
         );
 
         if (existingCart) {
-            existingCart.quantity = Math.min(existingCart.quantity + 1, product.stock);
+            existingCart.quantity = Math.min(existingCart.quantity + 1, getEffectiveStock(product));
         } else {
             cart.items.push({
                 productId: product._id,
@@ -233,7 +241,7 @@ router.post('/move-all-to-cart', authenticateToken, async (req, res) => {
 
         for (const item of wishlist.items) {
             const product = await Product.findById(item.productId);
-            if (!product || product.stock < 1) {
+            if (!product || getEffectiveStock(product) < 1) {
                 failed++;
                 remaining.push(item);
                 continue;
@@ -246,7 +254,7 @@ router.post('/move-all-to-cart', authenticateToken, async (req, res) => {
             );
 
             if (existingCart) {
-                existingCart.quantity = Math.min(existingCart.quantity + 1, product.stock);
+                existingCart.quantity = Math.min(existingCart.quantity + 1, getEffectiveStock(product));
             } else {
                 cart.items.push({
                     productId: product._id,

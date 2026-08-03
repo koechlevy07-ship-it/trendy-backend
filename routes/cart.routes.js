@@ -6,11 +6,9 @@ const Coupon = require('../models/Coupon');
 const { authenticateToken } = require('../middleware/auth');
 
 function getEffectiveStock(product) {
-    if (product.soldOut) return 0;
     if (product.stock > 0) return product.stock;
     if (product.limitedAvailable && product.limitedPieces > 0) return product.limitedPieces;
     if (product.preOrder) return 999;
-    if (product.inStock) return product.stockThreshold || 5;
     return 0;
 }
 
@@ -29,7 +27,7 @@ async function refreshCartItems(cart) {
                 brand: product.brand || '',
                 category: product.category || '',
                 sku: product.sku || '',
-                inStock: product.inStock || product.stock > 0 || (product.limitedAvailable && product.limitedPieces > 0),
+                inStock: getEffectiveStock(product) > 0,
                 stock: getEffectiveStock(product),
                 deliveryEstimate: product.deliveryEstimate || '2-5 business days',
                 material: product.material || ''

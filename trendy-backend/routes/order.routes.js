@@ -12,6 +12,13 @@ const { processMpesaPayment, verifyMpesaPayment } = require('../services/payment
 
 function escapeRegex(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
+function getEffectiveStock(product) {
+    if (product.stock > 0) return product.stock;
+    if (product.limitedAvailable && product.limitedPieces > 0) return product.limitedPieces;
+    if (product.preOrder) return 999;
+    return 0;
+}
+
 async function logInventoryChange(productId, qty, type, reason, ref = '') {
     try {
         let inv = await Inventory.findOne({ product: productId });
@@ -20,7 +27,7 @@ async function logInventoryChange(productId, qty, type, reason, ref = '') {
             inv = new Inventory({
                 product: productId,
                 sku: product?.sku || '',
-                quantity: Math.max(0, (product?.stock || 0)),
+                quantity: Math.max(0, (product ? getEffectiveStock(product) : 0)),
                 reservedQuantity: product?.reservedStock || 0,
                 lowStockThreshold: product?.stockThreshold || 5
             });
@@ -31,6 +38,70 @@ async function logInventoryChange(productId, qty, type, reason, ref = '') {
         inv.history.push({ previousQty, newQty, delta: qty, type, reason, reference: ref, admin: 'system' });
         await inv.save();
     } catch (err) { console.error('Inventory sync error:', err.message); }
+}
+
+// Atomically deduct stock so it can never go negative. Returns false if there
+// is not enough stock left (e.g. a concurrent order took it first).
+async function applyStockDeduction({ productId, qty, limited }) {
+    if (limited) {
+        const updated = await Product.findOneAndUpdate(
+            { _id: productId, limitedPieces: { $gte: qty } },
+            { $inc: { limitedPieces: -qty } },
+            { new: true }
+        );
+        if (!updated) return false;
+        if (updated.limitedPieces <= 0) {
+            await Product.findByIdAndUpdate(productId, { $set: { limitedAvailable: false, soldOut: true, inStock: false } });
+        } else {
+            await Product.findByIdAndUpdate(productId, { $set: { inStock: true, soldOut: false } });
+        }
+        return true;
+    }
+    const updated = await Product.findOneAndUpdate(
+        { _id: productId, stock: { $gte: qty } },
+        { $inc: { stock: -qty, totalSold: qty } },
+        { new: true }
+    );
+    if (!updated) return false;
+    if (updated.stock <= 0 && !updated.preOrder && !updated.limitedAvailable) {
+        await Product.findByIdAndUpdate(productId, { $set: { inStock: false, soldOut: true } });
+    } else if (updated.stock > 0) {
+        await Product.findByIdAndUpdate(productId, { $set: { inStock: true, soldOut: false } });
+    }
+    return true;
+}
+
+// Restore a deduction that must be rolled back (order creation failed).
+async function restoreStockDeduction({ productId, qty, limited }, ref = '') {
+    if (limited) {
+        await Product.findByIdAndUpdate(productId, {
+            $inc: { limitedPieces: qty },
+            $set: { limitedAvailable: true, inStock: true, soldOut: false }
+        });
+    } else {
+        await Product.findByIdAndUpdate(productId, {
+            $inc: { stock: qty, totalSold: -qty },
+            $set: { inStock: true, soldOut: false }
+        });
+    }
+    await logInventoryChange(productId, qty, 'cancel', 'Order placement rolled back', ref);
+}
+
+// Restore stock for a cancelled/returned/refunded order line.
+async function restoreOrderStock(item, type, reason, ref = '') {
+    const product = await Product.findById(item.productId).lean();
+    if (product && (product.limitedAvailable || product.limitedPieces > 0)) {
+        await Product.findByIdAndUpdate(item.productId, {
+            $inc: { limitedPieces: item.quantity },
+            $set: { limitedAvailable: true, inStock: true, soldOut: false }
+        });
+    } else {
+        await Product.findByIdAndUpdate(item.productId, {
+            $inc: { stock: item.quantity, totalSold: -item.quantity },
+            $set: { inStock: true, soldOut: false }
+        });
+    }
+    await logInventoryChange(item.productId, item.quantity, type, reason, ref);
 }
 
 function generateOrderNumber() {
@@ -104,59 +175,6 @@ router.get('/payment-methods', async (req, res) => {
         res.json({ success: true, data: mapped });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-});
-
-// POST /api/orders/callback/mpesa – Safaricom M-Pesa STK Push callback (NO auth)
-router.post('/callback/mpesa', async (req, res) => {
-    try {
-        const callbackData = req.body.Body?.stkCallback;
-        if (!callbackData) {
-            console.error('M-Pesa callback: missing stkCallback');
-            return res.json({ ResultCode: 0, ResultDesc: 'OK' });
-        }
-
-        const checkoutRequestId = callbackData.CheckoutRequestID;
-        const resultCode = callbackData.ResultCode;
-        const resultDesc = callbackData.ResultDesc;
-
-        console.log('M-Pesa callback:', { checkoutRequestId, resultCode, resultDesc });
-
-        const order = await Order.findOne({ 'paymentDetails.mpesaCheckoutRequestId': checkoutRequestId });
-        if (!order) {
-            console.error('M-Pesa callback: order not found for', checkoutRequestId);
-            return res.json({ ResultCode: 0, ResultDesc: 'OK' });
-        }
-
-        if (resultCode === 0) {
-            const items = callbackData.CallbackMetadata?.Item || [];
-            const mpesaReceipt = items.find(i => i.Name === 'MpesaReceiptNumber')?.Value || '';
-            const amount = items.find(i => i.Name === 'Amount')?.Value || order.total;
-            const phone = items.find(i => i.Name === 'PhoneNumber')?.Value || '';
-
-            order.paymentDetails.transactionId = mpesaReceipt;
-            order.paymentDetails.paymentRef = mpesaReceipt;
-            order.paymentDetails.paidAt = new Date();
-            order.paymentDetails.paymentStatus = 'completed';
-            order.paymentDetails.providerResponse = callbackData;
-            if (order.status === 'pending') order.status = 'confirmed';
-            order.timeline.push({ status: order.status, note: `M-Pesa payment confirmed (${mpesaReceipt})`, timestamp: new Date() });
-            await order.save();
-
-            const user = await User.findById(order.user).select('name email');
-            if (user) sendOrderConfirmation(order, user).catch(() => {});
-            if (user) sendAdminNewOrder(order, user).catch(() => {});
-        } else {
-            order.paymentDetails.paymentStatus = 'failed';
-            order.paymentDetails.providerResponse = callbackData;
-            order.timeline.push({ status: order.status, note: `M-Pesa payment failed: ${resultDesc}`, timestamp: new Date() });
-            await order.save();
-        }
-
-        res.json({ ResultCode: 0, ResultDesc: 'Success' });
-    } catch (err) {
-        console.error('M-Pesa callback error:', err);
-        res.json({ ResultCode: 0, ResultDesc: 'OK' });
     }
 });
 
@@ -385,11 +403,12 @@ router.post('/', authenticateToken, validate(schemas.order), async (req, res) =>
             if (!product) return res.status(400).json({ success: false, message: `Product not found: ${item.productId || item.id}` });
             const qty = item.quantity || 1;
 
-            if (!product.preOrder && !product.limitedAvailable) {
-                if (product.stock < qty) {
-                    return res.status(400).json({ success: false, message: `Insufficient stock for "${product.name}". Available: ${product.stock}, requested: ${qty}` });
-                }
-                stockUpdates.push({ productId: product._id, qty });
+            const available = getEffectiveStock(product);
+            if (available < qty) {
+                return res.status(400).json({ success: false, message: `Insufficient stock for "${product.name}". Available: ${available}, requested: ${qty}` });
+            }
+            if (!product.preOrder) {
+                stockUpdates.push({ productId: product._id, qty, limited: !!product.limitedAvailable });
             }
 
             const price = product.price;
@@ -444,46 +463,53 @@ router.post('/', authenticateToken, validate(schemas.order), async (req, res) =>
         const total = subtotal + deliveryFee + tax - discountAmount;
         const orderNumber = generateOrderNumber();
 
+        // Reserve stock BEFORE the order is saved so stock can never go negative.
+        const appliedStockUpdates = [];
+        for (const update of stockUpdates) {
+            const ok = await applyStockDeduction(update);
+            if (!ok) {
+                for (const applied of appliedStockUpdates) await restoreStockDeduction(applied);
+                return res.status(409).json({ success: false, message: 'Insufficient stock. Please reduce the quantity or refresh your cart.' });
+            }
+            await logInventoryChange(update.productId, -update.qty, 'order', 'Order placed', orderNumber);
+            appliedStockUpdates.push(update);
+        }
+
         const user = await User.findById(req.user.id).select('name email');
 
-        const order = new Order({
-            orderNumber,
-            user: req.user.id,
-            email: shippingAddress.email || (user ? user.email : ''),
-            items: orderItems,
-            shippingAddress,
-            billingAddress: billingAddress || {},
-            deliveryMethod: {
-                type: deliveryMethod?.type || 'standard',
-                label: deliveryLabel,
-                fee: deliveryFee,
-                estimatedDays: deliveryEstimatedDays,
-                provider: deliveryProvider
-            },
-            subtotal,
-            deliveryFee,
-            tax,
-            total,
-            paymentMethod: paymentMethod || 'cash',
-            couponCode: couponCode || undefined,
-            couponDiscount: discountAmount || undefined,
-            discount: discountAmount || 0,
-            status: 'pending',
-            notes: notes || '',
-            timeline: [{ status: 'pending', note: 'Order placed', timestamp: new Date() }],
-            paymentDetails: { paymentStatus: paymentMethod === 'cash' ? 'pending' : 'pending' }
-        });
-        await order.save();
-
-        for (const update of stockUpdates) {
-            await Product.findByIdAndUpdate(update.productId, {
-                $inc: { stock: -update.qty, totalSold: update.qty }
+        let order;
+        try {
+            order = new Order({
+                orderNumber,
+                user: req.user.id,
+                email: shippingAddress.email || (user ? user.email : ''),
+                items: orderItems,
+                shippingAddress,
+                billingAddress: billingAddress || {},
+                deliveryMethod: {
+                    type: deliveryMethod?.type || 'standard',
+                    label: deliveryLabel,
+                    fee: deliveryFee,
+                    estimatedDays: deliveryEstimatedDays,
+                    provider: deliveryProvider
+                },
+                subtotal,
+                deliveryFee,
+                tax,
+                total,
+                paymentMethod: paymentMethod || 'cash',
+                couponCode: couponCode || undefined,
+                couponDiscount: discountAmount || undefined,
+                discount: discountAmount || 0,
+                status: 'pending',
+                notes: notes || '',
+                timeline: [{ status: 'pending', note: 'Order placed', timestamp: new Date() }],
+                paymentDetails: { paymentStatus: paymentMethod === 'cash' ? 'pending' : 'pending' }
             });
-            const updated = await Product.findById(update.productId);
-            if (updated && updated.stock <= 0 && !updated.preOrder && !updated.limitedAvailable) {
-                await Product.findByIdAndUpdate(update.productId, { $set: { inStock: false, soldOut: true } });
-            }
-            await logInventoryChange(update.productId, -update.qty, 'order', 'Order placed', order.orderNumber);
+            await order.save();
+        } catch (err) {
+            for (const applied of appliedStockUpdates) await restoreStockDeduction(applied);
+            throw err;
         }
 
         const Cart = require('../models/Cart');
@@ -501,100 +527,6 @@ router.post('/', authenticateToken, validate(schemas.order), async (req, res) =>
     } catch (err) {
         console.error('POST /orders error:', err);
         res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-});
-
-// POST /api/orders/:id/pay-mpesa – Initiate M-Pesa STK Push for an order
-router.post('/:id/pay-mpesa', authenticateToken, async (req, res) => {
-    try {
-        const { phoneNumber } = req.body;
-        if (!phoneNumber) return res.status(400).json({ success: false, message: 'Phone number is required' });
-
-        const order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-        if (order.user.toString() !== req.user.id)
-            return res.status(403).json({ success: false, message: 'Not authorized' });
-        if (order.paymentDetails?.paymentStatus === 'completed')
-            return res.status(400).json({ success: false, message: 'Order already paid' });
-
-        let formattedPhone = phoneNumber.replace(/^\+?254/, '254').replace(/^0/, '254');
-        if (!formattedPhone.startsWith('254')) formattedPhone = '254' + formattedPhone;
-
-        const result = await processMpesaPayment({
-            phoneNumber: formattedPhone,
-            amount: order.total,
-            accountReference: order.orderNumber,
-            transactionDesc: `Payment for order ${order.orderNumber}`,
-            callbackUrl: `${process.env.API_URL || 'https://trendy-backend-jq27.onrender.com'}/api/mpesa/callback`
-        });
-
-        if (!result.success) {
-            return res.status(400).json({ success: false, message: result.error || 'M-Pesa STK Push failed' });
-        }
-
-        order.paymentDetails.mpesaCheckoutRequestId = result.checkoutRequestId;
-        order.paymentDetails.mpesaMerchantRequestId = result.merchantRequestId;
-        order.paymentDetails.paymentStatus = 'processing';
-        order.paymentDetails.providerResponse = result;
-        order.timeline.push({ status: order.status, note: `M-Pesa STK Push sent to ${formattedPhone}`, timestamp: new Date() });
-        await order.save();
-
-        res.json({
-            success: true,
-            message: result.customerMessage || 'Check your phone for the M-Pesa prompt',
-            data: {
-                checkoutRequestId: result.checkoutRequestId,
-                merchantRequestId: result.merchantRequestId
-            }
-        });
-    } catch (err) {
-        console.error('M-Pesa pay error:', err);
-        res.status(500).json({ success: false, message: 'M-Pesa payment failed' });
-    }
-});
-
-// POST /api/orders/:id/verify-payment – Poll payment status
-router.post('/:id/verify-payment', authenticateToken, async (req, res) => {
-    try {
-        const order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-        if (order.user.toString() !== req.user.id && req.user.role !== 'admin')
-            return res.status(403).json({ success: false, message: 'Not authorized' });
-
-        if (order.paymentDetails?.paymentStatus === 'completed') {
-            return res.json({ success: true, data: { status: 'completed', orderNumber: order.orderNumber } });
-        }
-
-        if (order.paymentDetails?.mpesaCheckoutRequestId) {
-            const verification = await verifyMpesaPayment(order.paymentDetails.mpesaCheckoutRequestId);
-            if (verification.success) {
-                const mpesaReceipt = verification.resultParameters?.find(p => p.Name === 'MpesaReceiptNumber')?.Value || '';
-                order.paymentDetails.transactionId = mpesaReceipt;
-                order.paymentDetails.paymentRef = mpesaReceipt;
-                order.paymentDetails.paidAt = new Date();
-                order.paymentDetails.paymentStatus = 'completed';
-                order.paymentDetails.providerResponse = verification;
-                if (order.status === 'pending') order.status = 'confirmed';
-                order.timeline.push({ status: order.status, note: `M-Pesa payment verified (${mpesaReceipt})`, timestamp: new Date() });
-                await order.save();
-                return res.json({ success: true, data: { status: 'completed', orderNumber: order.orderNumber } });
-            }
-            if (verification.pending) {
-                return res.json({ success: true, data: { status: 'processing' } });
-            }
-            if (verification.error) {
-                order.paymentDetails.paymentStatus = 'failed';
-                order.paymentDetails.providerResponse = verification;
-                order.timeline.push({ status: order.status, note: `M-Pesa payment failed: ${verification.error}`, timestamp: new Date() });
-                await order.save();
-                return res.json({ success: true, data: { status: 'failed' } });
-            }
-        }
-
-        res.json({ success: true, data: { status: order.paymentDetails?.paymentStatus || 'pending' } });
-    } catch (err) {
-        console.error('Verify payment error:', err);
-        res.status(500).json({ success: false, message: 'Payment verification failed' });
     }
 });
 
@@ -639,11 +571,7 @@ router.post('/:id/return', authenticateToken, requireAdmin, async (req, res) => 
         order.timeline.push({ status: 'returned', note: note || 'Return processed', admin: req.user?.name || req.user?.email || 'admin', timestamp: new Date() });
 
         for (const item of order.items) {
-            await Product.findByIdAndUpdate(item.productId, {
-                $inc: { stock: item.quantity, totalSold: -item.quantity },
-                $set: { inStock: true, soldOut: false }
-            });
-            await logInventoryChange(item.productId, item.quantity, 'return', 'Return processed', order.orderNumber);
+            await restoreOrderStock(item, 'return', 'Return processed', order.orderNumber);
         }
         await order.save();
         res.json({ success: true, data: order });
@@ -676,8 +604,7 @@ router.post('/admin/bulk', authenticateToken, requireAdmin, async (req, res) => 
                     order.timeline.push({ status: value, note: note || `Bulk status update to ${value}`, admin: adminName, timestamp: new Date() });
                     if (value === 'cancelled' && old !== 'cancelled') {
                         for (const item of order.items) {
-                            await Product.findByIdAndUpdate(item.productId, { $inc: { stock: item.quantity, totalSold: -item.quantity }, $set: { inStock: true, soldOut: false } });
-                            await logInventoryChange(item.productId, item.quantity, 'cancel', 'Bulk cancel', order.orderNumber);
+                            await restoreOrderStock(item, 'cancel', 'Bulk cancel', order.orderNumber);
                         }
                     }
                     const user = await User.findById(order.user).select('name email');
@@ -699,8 +626,7 @@ router.post('/admin/bulk', authenticateToken, requireAdmin, async (req, res) => 
                     order.cancelReason = note || 'Bulk cancelled';
                     order.timeline.push({ status: 'cancelled', note: note || 'Bulk cancelled', admin: adminName, timestamp: new Date() });
                     for (const item of order.items) {
-                        await Product.findByIdAndUpdate(item.productId, { $inc: { stock: item.quantity, totalSold: -item.quantity }, $set: { inStock: true, soldOut: false } });
-                        await logInventoryChange(item.productId, item.quantity, 'cancel', 'Bulk cancel', order.orderNumber);
+                        await restoreOrderStock(item, 'cancel', 'Bulk cancel', order.orderNumber);
                     }
                 } else {
                     results.errors.push({ id, message: `Unknown action: ${action}` }); continue;
@@ -783,11 +709,7 @@ router.put('/:id/cancel', authenticateToken, async (req, res) => {
         await order.save();
 
         for (const item of order.items) {
-            await Product.findByIdAndUpdate(item.productId, {
-                $inc: { stock: item.quantity, totalSold: -item.quantity },
-                $set: { inStock: true, soldOut: false }
-            });
-            await logInventoryChange(item.productId, item.quantity, 'cancel', 'Order cancelled by customer', order.orderNumber);
+            await restoreOrderStock(item, 'cancel', 'Order cancelled by customer', order.orderNumber);
         }
 
         res.json({ success: true, data: order });
@@ -817,11 +739,7 @@ router.put('/:id/status', authenticateToken, requireAdmin, async (req, res) => {
 
             if (status === 'cancelled' && oldStatus !== 'cancelled') {
                 for (const item of order.items) {
-                    await Product.findByIdAndUpdate(item.productId, {
-                        $inc: { stock: item.quantity, totalSold: -item.quantity },
-                        $set: { inStock: true, soldOut: false }
-                    });
-                    await logInventoryChange(item.productId, item.quantity, 'cancel', 'Order cancelled by admin', order.orderNumber);
+                    await restoreOrderStock(item, 'cancel', 'Order cancelled by admin', order.orderNumber);
                 }
             }
         }
@@ -918,11 +836,7 @@ router.put('/:id/refund', authenticateToken, requireAdmin, async (req, res) => {
 
             if (oldRefundStatus !== 'completed') {
                 for (const item of order.items) {
-                    await Product.findByIdAndUpdate(item.productId, {
-                        $inc: { stock: item.quantity, totalSold: -item.quantity },
-                        $set: { inStock: true, soldOut: false }
-                    });
-                    await logInventoryChange(item.productId, item.quantity, 'refund', 'Stock restored from refund', order.orderNumber);
+                    await restoreOrderStock(item, 'refund', 'Stock restored from refund', order.orderNumber);
                 }
             }
         } else {
@@ -965,6 +879,93 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
 
         res.json({ success: true, data: order });
     } catch (err) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
+// ============================================================
+// M-Pesa Payment Routes
+// ============================================================
+
+// POST /api/orders/:id/pay-mpesa – initiate M-Pesa STK Push
+router.post('/:id/pay-mpesa', authenticateToken, async (req, res) => {
+    try {
+        const { phoneNumber } = req.body;
+        if (!phoneNumber) {
+            return res.status(400).json({ success: false, message: 'Phone number is required' });
+        }
+        const order = await Order.findById(req.params.id);
+        if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+        if (order.user.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+        if (order.status !== 'pending') {
+            return res.status(409).json({ success: false, message: `Order is "${order.status}" — cannot be paid` });
+        }
+
+        const result = await processMpesaPayment({
+            phoneNumber,
+            amount: order.total,
+            accountReference: order.orderNumber,
+            transactionDesc: `Payment for order ${order.orderNumber}`
+        });
+
+        if (result.success) {
+            order.paymentDetails = order.paymentDetails || {};
+            order.paymentDetails.checkoutRequestId = result.checkoutRequestId;
+            order.paymentDetails.merchantRequestId = result.merchantRequestId;
+            order.paymentDetails.paymentStatus = 'pending';
+            order.timeline.push({ status: order.status, note: 'M-Pesa STK Push sent', timestamp: new Date() });
+            await order.save();
+
+            return res.status(202).json({
+                success: true,
+                message: result.customerMessage || 'Payment prompt sent. Check your phone for the M-Pesa PIN prompt.',
+                checkoutRequestId: result.checkoutRequestId
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: result.error || 'M-Pesa payment initiation failed'
+            });
+        }
+    } catch (err) {
+        console.error('POST /:id/pay-mpesa error:', err);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
+// POST /api/orders/:id/verify-payment – check M-Pesa payment status
+router.post('/:id/verify-payment', authenticateToken, async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+        if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+        if (order.user.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+
+        const checkoutRequestId = order.paymentDetails?.checkoutRequestId;
+        if (!checkoutRequestId) {
+            return res.status(400).json({ success: false, message: 'No pending M-Pesa transaction found' });
+        }
+
+        const result = await verifyMpesaPayment(checkoutRequestId);
+
+        if (result.success) {
+            order.paymentDetails.paymentStatus = 'completed';
+            order.paymentDetails.paidAt = new Date();
+            order.paymentDetails.transactionId = checkoutRequestId;
+            order.timeline.push({ status: order.status, note: 'M-Pesa payment confirmed', timestamp: new Date() });
+            await order.save();
+
+            return res.json({ success: true, data: { status: 'completed' } });
+        } else if (result.pending) {
+            return res.json({ success: true, data: { status: 'pending' } });
+        } else {
+            return res.json({ success: true, data: { status: 'failed', message: result.error } });
+        }
+    } catch (err) {
+        console.error('POST /:id/verify-payment error:', err);
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });

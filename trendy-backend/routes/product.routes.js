@@ -616,10 +616,15 @@ router.put('/:id', authenticateToken, requireAdmin, validate(schemas.product), a
             // Fetch current product to fill in any values we don't have
             const current = await Product.findById(req.params.id).lean();
             const s = finalStock !== undefined ? finalStock : (current?.stock || 0);
-            const so = finalSoldOut !== undefined ? finalSoldOut : (current?.soldOut || false);
+            let so = finalSoldOut !== undefined ? finalSoldOut : (current?.soldOut || false);
             const po = finalPreOrder !== undefined ? finalPreOrder : (current?.preOrder || false);
             const la = finalLimitedAvail !== undefined ? finalLimitedAvail : (current?.limitedAvailable || false);
             const lp = finalLimitedPieces !== undefined ? finalLimitedPieces : (current?.limitedPieces || 0);
+            // Auto-derive soldOut from stock when the admin changes stock without setting the flag
+            if (finalStock !== undefined && finalSoldOut === undefined && !po && !la && lp === 0) {
+                so = s <= 0;
+            }
+            if (so !== (current?.soldOut || false)) updateData.soldOut = so;
             updateData.inStock = so ? false : (s > 0 || po || la || lp > 0);
         }
 

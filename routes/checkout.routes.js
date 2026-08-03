@@ -20,12 +20,72 @@ const { sendOrderConfirmation, sendCheckoutAbandoned, sendPaymentConfirmation, s
 const { generateInvoicePDF, sendInvoiceEmail } = require('../services/invoiceService');
 
 function getEffectiveStock(product) {
-    if (product.soldOut) return 0;
     if (product.stock > 0) return product.stock;
     if (product.limitedAvailable && product.limitedPieces > 0) return product.limitedPieces;
     if (product.preOrder) return 999;
-    if (product.inStock) return product.stockThreshold || 5;
     return 0;
+}
+
+// Atomically deduct stock so it can never go negative.
+async function applyStockDeduction({ productId, qty, limited }) {
+    if (limited) {
+        const updated = await Product.findOneAndUpdate(
+            { _id: productId, limitedPieces: { $gte: qty } },
+            { $inc: { limitedPieces: -qty } },
+            { new: true }
+        );
+        if (!updated) return false;
+        if (updated.limitedPieces <= 0) {
+            await Product.findByIdAndUpdate(productId, { $set: { limitedAvailable: false, soldOut: true, inStock: false } });
+        } else {
+            await Product.findByIdAndUpdate(productId, { $set: { inStock: true, soldOut: false } });
+        }
+        return true;
+    }
+    const updated = await Product.findOneAndUpdate(
+        { _id: productId, stock: { $gte: qty } },
+        { $inc: { stock: -qty, totalSold: qty } },
+        { new: true }
+    );
+    if (!updated) return false;
+    if (updated.stock <= 0 && !updated.preOrder && !updated.limitedAvailable) {
+        await Product.findByIdAndUpdate(productId, { $set: { inStock: false, soldOut: true } });
+    } else if (updated.stock > 0) {
+        await Product.findByIdAndUpdate(productId, { $set: { inStock: true, soldOut: false } });
+    }
+    return true;
+}
+
+// Restore a deduction that must be rolled back (order creation failed).
+async function restoreStockDeduction({ productId, qty, limited }) {
+    if (limited) {
+        await Product.findByIdAndUpdate(productId, {
+            $inc: { limitedPieces: qty },
+            $set: { limitedAvailable: true, inStock: true, soldOut: false }
+        });
+    } else {
+        await Product.findByIdAndUpdate(productId, {
+            $inc: { stock: qty, totalSold: -qty },
+            $set: { inStock: true, soldOut: false }
+        });
+    }
+}
+
+// Restore stock for a cancelled/returned/refunded order line.
+async function restoreCheckoutStock(item, action, reason) {
+    const product = await Product.findById(item.productId);
+    if (product && (product.limitedAvailable || product.limitedPieces > 0)) {
+        await Product.findByIdAndUpdate(item.productId, {
+            $inc: { limitedPieces: item.quantity },
+            $set: { limitedAvailable: true, inStock: true, soldOut: false }
+        });
+    } else {
+        await Product.findByIdAndUpdate(item.productId, {
+            $inc: { stock: item.quantity, totalSold: -item.quantity },
+            $set: { inStock: true, soldOut: false }
+        });
+    }
+    await logInventoryChange(item.productId, item.quantity, action, reason, item.orderNumber || '');
 }
 
 // Helper functions
@@ -1045,11 +1105,7 @@ router.put('/:id/status', authenticateToken, requireAdmin, async (req, res) => {
             if (status === 'cancelled' && oldStatus !== 'cancelled') {
                 // Restore inventory
                 for (const item of order.items) {
-                    await Product.findByIdAndUpdate(item.productId, {
-                        $inc: { stock: item.quantity, totalSold: -item.quantity },
-                        $set: { inStock: true, soldOut: false }
-                    });
-                    await logInventoryChange(item.productId, item.quantity, 'cancel', 'Order cancelled by admin', order.orderNumber);
+                    await restoreCheckoutStock(item, 'cancel', 'Order cancelled by admin');
                 }
             }
         }
@@ -1102,11 +1158,7 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
         
         // Restore inventory
         for (const item of order.items) {
-            await Product.findByIdAndUpdate(item.productId, {
-                $inc: { stock: item.quantity, totalSold: -item.quantity },
-                $set: { inStock: true, soldOut: false }
-            });
-            await logInventoryChange(item.productId, item.quantity, 'cancel', 'Order cancelled by customer', order.orderNumber);
+            await restoreCheckoutStock(item, 'cancel', 'Order cancelled by customer');
         }
         
         res.json({ success: true, data: order });
@@ -1390,7 +1442,7 @@ router.post('/admin/checkout/:sessionToken/recover', authenticateToken, requireA
 // Helper functions
 async function createOrderFromCheckout(session) {
     const orderNumber = generateOrderNumber();
-    
+
     const orderItems = session.items.map(item => ({
         productId: item.productId,
         name: item.name,
@@ -1406,32 +1458,32 @@ async function createOrderFromCheckout(session) {
         brand: item.brand,
         category: item.category
     }));
-    
+
     const subtotal = session.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const deliveryFee = session.deliveryFee || 0;
     const tax = session.tax || 0;
     const discount = session.couponDiscount || 0;
     const total = subtotal + (session.deliveryFee || 0) + (session.tax || 0) - discount;
-    
+
+    // Deduct stock BEFORE the order is saved so stock can never go negative.
+    const applied = [];
+    for (const item of session.items) {
+        const product = await Product.findById(item.productId);
+        if (!product) continue;
+        if (product.preOrder) continue;
+        const ok = await applyStockDeduction({ productId: item.productId, qty: item.quantity, limited: !!product.limitedAvailable });
+        if (!ok) {
+            for (const a of applied) await restoreStockDeduction(a);
+            throw new Error(`Insufficient stock for "${product.name}". Please reduce the quantity or refresh your cart.`);
+        }
+        applied.push({ productId: item.productId, qty: item.quantity, limited: !!product.limitedAvailable });
+    }
+
     const order = new Order({
-        orderNumber: generateOrderNumber(),
+        orderNumber,
         user: session.userId,
         email: session.shippingAddress?.email || '',
-        items: session.items.map(item => ({
-            productId: item.productId,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            originalPrice: item.originalPrice || 0,
-            discount: 0,
-            lineTotal: item.price * item.quantity,
-            image: item.image,
-            size: item.size,
-            color: item.color,
-            sku: item.sku,
-            brand: item.brand,
-            category: item.category
-        })),
+        items: orderItems,
         shippingAddress: session.shippingAddress,
         billingAddress: session.billingAddress,
         deliveryMethod: session.deliveryMethod,
@@ -1446,13 +1498,18 @@ async function createOrderFromCheckout(session) {
         status: 'pending',
         notes: session.notes || '',
         timeline: [{ status: 'pending', note: 'Order placed', timestamp: new Date() }],
-        paymentDetails: { 
+        paymentDetails: {
             paymentStatus: session.paymentStatus || 'pending',
             transactionId: session.paymentTransactionId?.toString()
         }
     });
-    
-    await order.save();
+
+    try {
+        await order.save();
+    } catch (err) {
+        for (const a of applied) await restoreStockDeduction(a);
+        throw err;
+    }
     return order;
 }
 

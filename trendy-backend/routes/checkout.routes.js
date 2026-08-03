@@ -13,11 +13,80 @@ const crypto = require('crypto');
 
 // Import payment services (to be implemented)
 const { processMpesaPayment, verifyMpesaPayment, processStripePayment, processPaypalPayment } = require('../services/paymentService');
-const { calculateShipping, estimateDelivery } = require('../services/shippingService');
+const { calculateShipping } = require('../services/shippingService');
 const { calculateTax } = require('../services/taxService');
 const { runFraudChecks } = require('../services/fraudService');
 const { sendOrderConfirmation, sendCheckoutAbandoned, sendPaymentConfirmation, sendOrderStatusUpdate } = require('../services/emailService');
 const { generateInvoicePDF, sendInvoiceEmail } = require('../services/invoiceService');
+
+function getEffectiveStock(product) {
+    if (product.stock > 0) return product.stock;
+    if (product.limitedAvailable && product.limitedPieces > 0) return product.limitedPieces;
+    if (product.preOrder) return 999;
+    return 0;
+}
+
+// Atomically deduct stock so it can never go negative.
+async function applyStockDeduction({ productId, qty, limited }) {
+    if (limited) {
+        const updated = await Product.findOneAndUpdate(
+            { _id: productId, limitedPieces: { $gte: qty } },
+            { $inc: { limitedPieces: -qty } },
+            { new: true }
+        );
+        if (!updated) return false;
+        if (updated.limitedPieces <= 0) {
+            await Product.findByIdAndUpdate(productId, { $set: { limitedAvailable: false, soldOut: true, inStock: false } });
+        } else {
+            await Product.findByIdAndUpdate(productId, { $set: { inStock: true, soldOut: false } });
+        }
+        return true;
+    }
+    const updated = await Product.findOneAndUpdate(
+        { _id: productId, stock: { $gte: qty } },
+        { $inc: { stock: -qty, totalSold: qty } },
+        { new: true }
+    );
+    if (!updated) return false;
+    if (updated.stock <= 0 && !updated.preOrder && !updated.limitedAvailable) {
+        await Product.findByIdAndUpdate(productId, { $set: { inStock: false, soldOut: true } });
+    } else if (updated.stock > 0) {
+        await Product.findByIdAndUpdate(productId, { $set: { inStock: true, soldOut: false } });
+    }
+    return true;
+}
+
+// Restore a deduction that must be rolled back (order creation failed).
+async function restoreStockDeduction({ productId, qty, limited }) {
+    if (limited) {
+        await Product.findByIdAndUpdate(productId, {
+            $inc: { limitedPieces: qty },
+            $set: { limitedAvailable: true, inStock: true, soldOut: false }
+        });
+    } else {
+        await Product.findByIdAndUpdate(productId, {
+            $inc: { stock: qty, totalSold: -qty },
+            $set: { inStock: true, soldOut: false }
+        });
+    }
+}
+
+// Restore stock for a cancelled/returned/refunded order line.
+async function restoreCheckoutStock(item, action, reason) {
+    const product = await Product.findById(item.productId);
+    if (product && (product.limitedAvailable || product.limitedPieces > 0)) {
+        await Product.findByIdAndUpdate(item.productId, {
+            $inc: { limitedPieces: item.quantity },
+            $set: { limitedAvailable: true, inStock: true, soldOut: false }
+        });
+    } else {
+        await Product.findByIdAndUpdate(item.productId, {
+            $inc: { stock: item.quantity, totalSold: -item.quantity },
+            $set: { inStock: true, soldOut: false }
+        });
+    }
+    await logInventoryChange(item.productId, item.quantity, action, reason, item.orderNumber || '');
+}
 
 // Helper functions
 function generateSessionToken() {
@@ -66,8 +135,9 @@ router.post('/', async (req, res) => {
                 return res.status(400).json({ success: false, message: `Product not found: ${item.productId || item.id}` });
             }
             
-            if (product.stock < (item.quantity || 1)) {
-                return res.status(400).json({ success: false, message: `Insufficient stock for "${product.name}"` });
+            const available = getEffectiveStock(product);
+            if (available < (item.quantity || 1)) {
+                return res.status(400).json({ success: false, message: `Insufficient stock for "${product.name}". Available: ${available}, requested: ${item.quantity || 1}` });
             }
             
             const price = product.price;
@@ -132,6 +202,128 @@ router.post('/', async (req, res) => {
     } catch (err) {
         console.error('Checkout init error:', err);
         res.status(500).json({ success: false, message: 'Failed to initialize checkout' });
+    }
+});
+
+// GET /api/checkout/shipping-methods – Get available shipping methods
+router.get('/shipping-methods', async (req, res) => {
+    try {
+        const methods = await ShippingMethod.find({ isActive: true })
+            .sort({ sortOrder: 1, baseFee: 1 })
+            .lean();
+        
+        res.json({ success: true, data: methods });
+    } catch (err) {
+        console.error('Get shipping methods error:', err);
+        res.status(500).json({ success: false, message: 'Failed to fetch shipping methods' });
+    }
+});
+
+// GET /api/checkout/shipping-options – Get shipping options for address
+router.post('/shipping-options', async (req, res) => {
+    try {
+        const { address, subtotal } = req.body;
+        
+        if (!address || !address.city) {
+            return res.status(400).json({ success: false, message: 'City is required' });
+        }
+        
+        const methods = await ShippingMethod.find({ isActive: true })
+            .sort({ baseFee: 1 })
+            .lean();
+        
+        const options = [];
+        for (const method of methods) {
+            // Check if method is available for this location
+            let available = true;
+            let fee = method.baseFee;
+            let estimatedDays = method.estimatedDays;
+            
+            // Check zone restrictions
+            if (method.zones && method.zones.length > 0) {
+                const matchingZone = method.zones.find(zone => 
+                    zone.isActive && 
+                    (zone.counties?.includes(req.body.address?.county) || 
+                     zone.cities?.includes(req.body.address?.city))
+                );
+                if (!matchingZone) {
+                    available = false;
+                } else {
+                    fee = matchingZone.fee || method.baseFee;
+                    estimatedDays = matchingZone.estimatedDays || method.estimatedDays;
+                }
+            }
+            
+            // Apply free shipping threshold
+            if (req.body.subtotal >= (method.freeShippingThreshold || 0)) {
+                fee = 0;
+            }
+            
+            if (available) {
+                options.push({
+                    ...method,
+                    fee,
+                    estimatedDays,
+                    available: true
+                });
+            }
+        }
+        
+        // Add free shipping if threshold met
+        const settings = await Settings.findOne();
+        const freeThreshold = settings?.freeDeliveryThreshold || 15000;
+        if (req.body.subtotal >= freeThreshold) {
+            const freeShipping = options.find(o => o.type === 'standard');
+            if (freeShipping) {
+                freeShipping.fee = 0;
+                freeShipping.label = 'Free Standard Delivery';
+            }
+        }
+        
+        res.json({ success: true, data: options.filter(o => o.available) });
+    } catch (err) {
+        console.error('Shipping options error:', err);
+        res.status(500).json({ success: false, message: 'Failed to calculate shipping options' });
+    }
+});
+
+// GET /api/checkout/payment-methods – Get available payment methods
+router.get('/payment-methods', async (req, res) => {
+    try {
+        const settings = await Settings.findOne();
+        const methods = [];
+        
+        // Get configured payment methods from settings
+        const configuredMethods = settings?.paymentMethods || [
+            'mpesa', 'stripe', 'paypal', 'visa', 'mastercard', 
+            'apple-pay', 'google-pay', 'bank-transfer', 'cash-on-delivery'
+        ];
+        
+        // Load payment method configurations
+        const configs = await PaymentMethodConfig.find({ isEnabled: true })
+            .sort({ sortOrder: 1 })
+            .lean();
+        
+        for (const config of configs) {
+            if (configuredMethods.includes(config.type)) {
+                methods.push({
+                    type: config.type,
+                    label: config.label,
+                    fees: config.fees,
+                    displayIcon: config.displayIcon,
+                    displayColor: config.displayColor,
+                    requiresRedirect: config.requiresRedirect,
+                    supportsRefunds: config.supportsRefunds,
+                    processingTime: config.processingTime,
+                    requirements: config.requirements
+                });
+            }
+        }
+        
+        res.json({ success: true, data: methods });
+    } catch (err) {
+        console.error('Get payment methods error:', err);
+        res.status(500).json({ success: false, message: 'Failed to retrieve checkout' });
     }
 });
 
@@ -288,7 +480,8 @@ router.post('/:sessionToken/validate', async (req, res) => {
         // Validate stock
         for (const item of session.items) {
             const product = await Product.findById(item.productId);
-            if (!product || product.stock < item.quantity) {
+            const available = product ? getEffectiveStock(product) : 0;
+            if (!product || available < item.quantity) {
                 errors.push(`Insufficient stock for ${item.name}`);
             }
         }
@@ -444,87 +637,6 @@ router.delete('/:sessionToken/coupon', async (req, res) => {
 // SHIPPING & DELIVERY ROUTES
 // ============================================================
 
-// GET /api/checkout/shipping-methods – Get available shipping methods
-router.get('/shipping-methods', async (req, res) => {
-    try {
-        const methods = await ShippingMethod.find({ isActive: true })
-            .sort({ sortOrder: 1, baseFee: 1 })
-            .lean();
-        
-        res.json({ success: true, data: methods });
-    } catch (err) {
-        console.error('Get shipping methods error:', err);
-        res.status(500).json({ success: false, message: 'Failed to fetch shipping methods' });
-    }
-});
-
-// GET /api/checkout/shipping-options – Get shipping options for address
-router.post('/shipping-options', async (req, res) => {
-    try {
-        const { address, subtotal } = req.body;
-        
-        if (!address || !address.city) {
-            return res.status(400).json({ success: false, message: 'City is required' });
-        }
-        
-        const methods = await ShippingMethod.find({ isActive: true })
-            .sort({ baseFee: 1 })
-            .lean();
-        
-        const options = [];
-        for (const method of methods) {
-            // Check if method is available for this location
-            let available = true;
-            let fee = method.baseFee;
-            let estimatedDays = method.estimatedDays;
-            
-            // Check zone restrictions
-            if (method.zones && method.zones.length > 0) {
-                const matchingZone = method.zones.find(zone => 
-                    zone.isActive && 
-                    (zone.counties?.includes(req.body.address?.county) || 
-                     zone.cities?.includes(req.body.address?.city))
-                );
-                if (!matchingZone) {
-                    available = false;
-                } else {
-                    fee = matchingZone.fee || method.baseFee;
-                    estimatedDays = matchingZone.estimatedDays || method.estimatedDays;
-                }
-            }
-            
-            // Apply free shipping threshold
-            if (req.body.subtotal >= (method.freeShippingThreshold || 0)) {
-                fee = 0;
-            }
-            
-            if (available) {
-                options.push({
-                    ...method,
-                    fee,
-                    estimatedDays,
-                    available: true
-                });
-            }
-        }
-        
-        // Add free shipping if threshold met
-        const settings = await Settings.findOne();
-        const freeThreshold = settings?.freeDeliveryThreshold || 15000;
-        if (req.body.subtotal >= freeThreshold) {
-            const freeShipping = options.find(o => o.type === 'standard');
-            if (freeShipping) {
-                freeShipping.fee = 0;
-                freeShipping.label = 'Free Standard Delivery';
-            }
-        }
-        
-        res.json({ success: true, data: options.filter(o => o.available) });
-    } catch (err) {
-        console.error('Shipping options error:', err);
-        res.status(500).json({ success: false, message: 'Failed to calculate shipping options' });
-    }
-});
 
 // POST /api/checkout/:sessionToken/delivery-method – Set delivery method
 router.post('/:sessionToken/delivery-method', async (req, res) => {
@@ -577,49 +689,6 @@ router.post('/:sessionToken/delivery-method', async (req, res) => {
     }
 });
 
-// ============================================================
-// PAYMENT ROUTES
-// ============================================================
-
-// GET /api/checkout/payment-methods – Get available payment methods
-router.get('/payment-methods', async (req, res) => {
-    try {
-        const settings = await Settings.findOne();
-        const methods = [];
-        
-        // Get configured payment methods from settings
-        const configuredMethods = settings?.paymentMethods || [
-            'mpesa', 'stripe', 'paypal', 'visa', 'mastercard', 
-            'apple-pay', 'google-pay', 'bank-transfer', 'cash-on-delivery'
-        ];
-        
-        // Load payment method configurations
-        const configs = await PaymentMethodConfig.find({ isEnabled: true })
-            .sort({ sortOrder: 1 })
-            .lean();
-        
-        for (const config of configs) {
-            if (configuredMethods.includes(config.type)) {
-                methods.push({
-                    type: config.type,
-                    label: config.label,
-                    fees: config.fees,
-                    displayIcon: config.displayIcon,
-                    displayColor: config.displayColor,
-                    requiresRedirect: config.requiresRedirect,
-                    supportsRefunds: config.supportsRefunds,
-                    processingTime: config.processingTime,
-                    requirements: config.requirements
-                });
-            }
-        }
-        
-        res.json({ success: true, data: methods });
-    } catch (err) {
-        console.error('Get payment methods error:', err);
-        res.status(500).json({ success: false, message: 'Failed to fetch payment methods' });
-    }
-});
 
 // POST /api/checkout/:sessionToken/payment-method – Set payment method
 router.post('/:sessionToken/payment-method', async (req, res) => {
@@ -710,9 +779,9 @@ router.post('/payment/mpesa', async (req, res) => {
         const result = await processMpesaPayment({
             phoneNumber,
             amount: mpesaAmount,
-            accountReference: checkoutSession.sessionToken,
+            accountReference: '149042',
             transactionDesc: `Order payment for Trendy Wardrobe`,
-            callbackUrl: `${process.env.API_URL || 'https://trendy-backend-jq27.onrender.com'}/api/payment/callback/mpesa`,
+            callbackUrl: `${process.env.API_URL || 'https://trendy-backend-jq27.onrender.com'}/api/checkout/payment/callback/mpesa`,
             transactionId: transaction.transactionId
         });
         
@@ -1036,11 +1105,7 @@ router.put('/:id/status', authenticateToken, requireAdmin, async (req, res) => {
             if (status === 'cancelled' && oldStatus !== 'cancelled') {
                 // Restore inventory
                 for (const item of order.items) {
-                    await Product.findByIdAndUpdate(item.productId, {
-                        $inc: { stock: item.quantity, totalSold: -item.quantity },
-                        $set: { inStock: true, soldOut: false }
-                    });
-                    await logInventoryChange(item.productId, item.quantity, 'cancel', 'Order cancelled by admin', order.orderNumber);
+                    await restoreCheckoutStock(item, 'cancel', 'Order cancelled by admin');
                 }
             }
         }
@@ -1093,11 +1158,7 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
         
         // Restore inventory
         for (const item of order.items) {
-            await Product.findByIdAndUpdate(item.productId, {
-                $inc: { stock: item.quantity, totalSold: -item.quantity },
-                $set: { inStock: true, soldOut: false }
-            });
-            await logInventoryChange(item.productId, item.quantity, 'cancel', 'Order cancelled by customer', order.orderNumber);
+            await restoreCheckoutStock(item, 'cancel', 'Order cancelled by customer');
         }
         
         res.json({ success: true, data: order });
@@ -1381,7 +1442,7 @@ router.post('/admin/checkout/:sessionToken/recover', authenticateToken, requireA
 // Helper functions
 async function createOrderFromCheckout(session) {
     const orderNumber = generateOrderNumber();
-    
+
     const orderItems = session.items.map(item => ({
         productId: item.productId,
         name: item.name,
@@ -1397,32 +1458,32 @@ async function createOrderFromCheckout(session) {
         brand: item.brand,
         category: item.category
     }));
-    
+
     const subtotal = session.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const deliveryFee = session.deliveryFee || 0;
     const tax = session.tax || 0;
     const discount = session.couponDiscount || 0;
     const total = subtotal + (session.deliveryFee || 0) + (session.tax || 0) - discount;
-    
+
+    // Deduct stock BEFORE the order is saved so stock can never go negative.
+    const applied = [];
+    for (const item of session.items) {
+        const product = await Product.findById(item.productId);
+        if (!product) continue;
+        if (product.preOrder) continue;
+        const ok = await applyStockDeduction({ productId: item.productId, qty: item.quantity, limited: !!product.limitedAvailable });
+        if (!ok) {
+            for (const a of applied) await restoreStockDeduction(a);
+            throw new Error(`Insufficient stock for "${product.name}". Please reduce the quantity or refresh your cart.`);
+        }
+        applied.push({ productId: item.productId, qty: item.quantity, limited: !!product.limitedAvailable });
+    }
+
     const order = new Order({
-        orderNumber: generateOrderNumber(),
+        orderNumber,
         user: session.userId,
         email: session.shippingAddress?.email || '',
-        items: session.items.map(item => ({
-            productId: item.productId,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            originalPrice: item.originalPrice || 0,
-            discount: 0,
-            lineTotal: item.price * item.quantity,
-            image: item.image,
-            size: item.size,
-            color: item.color,
-            sku: item.sku,
-            brand: item.brand,
-            category: item.category
-        })),
+        items: orderItems,
         shippingAddress: session.shippingAddress,
         billingAddress: session.billingAddress,
         deliveryMethod: session.deliveryMethod,
@@ -1437,13 +1498,18 @@ async function createOrderFromCheckout(session) {
         status: 'pending',
         notes: session.notes || '',
         timeline: [{ status: 'pending', note: 'Order placed', timestamp: new Date() }],
-        paymentDetails: { 
+        paymentDetails: {
             paymentStatus: session.paymentStatus || 'pending',
             transactionId: session.paymentTransactionId?.toString()
         }
     });
-    
-    await order.save();
+
+    try {
+        await order.save();
+    } catch (err) {
+        for (const a of applied) await restoreStockDeduction(a);
+        throw err;
+    }
     return order;
 }
 

@@ -13,11 +13,9 @@ const { processMpesaPayment, verifyMpesaPayment } = require('../services/payment
 function escapeRegex(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 function getEffectiveStock(product) {
-    if (product.soldOut) return 0;
     if (product.stock > 0) return product.stock;
     if (product.limitedAvailable && product.limitedPieces > 0) return product.limitedPieces;
     if (product.preOrder) return 999;
-    if (product.inStock) return product.stockThreshold || 5;
     return 0;
 }
 
@@ -29,7 +27,7 @@ async function logInventoryChange(productId, qty, type, reason, ref = '') {
             inv = new Inventory({
                 product: productId,
                 sku: product?.sku || '',
-                quantity: Math.max(0, (product?.stock || 0)),
+                quantity: Math.max(0, (product ? getEffectiveStock(product) : 0)),
                 reservedQuantity: product?.reservedStock || 0,
                 lowStockThreshold: product?.stockThreshold || 5
             });
@@ -40,6 +38,70 @@ async function logInventoryChange(productId, qty, type, reason, ref = '') {
         inv.history.push({ previousQty, newQty, delta: qty, type, reason, reference: ref, admin: 'system' });
         await inv.save();
     } catch (err) { console.error('Inventory sync error:', err.message); }
+}
+
+// Atomically deduct stock so it can never go negative. Returns false if there
+// is not enough stock left (e.g. a concurrent order took it first).
+async function applyStockDeduction({ productId, qty, limited }) {
+    if (limited) {
+        const updated = await Product.findOneAndUpdate(
+            { _id: productId, limitedPieces: { $gte: qty } },
+            { $inc: { limitedPieces: -qty } },
+            { new: true }
+        );
+        if (!updated) return false;
+        if (updated.limitedPieces <= 0) {
+            await Product.findByIdAndUpdate(productId, { $set: { limitedAvailable: false, soldOut: true, inStock: false } });
+        } else {
+            await Product.findByIdAndUpdate(productId, { $set: { inStock: true, soldOut: false } });
+        }
+        return true;
+    }
+    const updated = await Product.findOneAndUpdate(
+        { _id: productId, stock: { $gte: qty } },
+        { $inc: { stock: -qty, totalSold: qty } },
+        { new: true }
+    );
+    if (!updated) return false;
+    if (updated.stock <= 0 && !updated.preOrder && !updated.limitedAvailable) {
+        await Product.findByIdAndUpdate(productId, { $set: { inStock: false, soldOut: true } });
+    } else if (updated.stock > 0) {
+        await Product.findByIdAndUpdate(productId, { $set: { inStock: true, soldOut: false } });
+    }
+    return true;
+}
+
+// Restore a deduction that must be rolled back (order creation failed).
+async function restoreStockDeduction({ productId, qty, limited }, ref = '') {
+    if (limited) {
+        await Product.findByIdAndUpdate(productId, {
+            $inc: { limitedPieces: qty },
+            $set: { limitedAvailable: true, inStock: true, soldOut: false }
+        });
+    } else {
+        await Product.findByIdAndUpdate(productId, {
+            $inc: { stock: qty, totalSold: -qty },
+            $set: { inStock: true, soldOut: false }
+        });
+    }
+    await logInventoryChange(productId, qty, 'cancel', 'Order placement rolled back', ref);
+}
+
+// Restore stock for a cancelled/returned/refunded order line.
+async function restoreOrderStock(item, type, reason, ref = '') {
+    const product = await Product.findById(item.productId).lean();
+    if (product && (product.limitedAvailable || product.limitedPieces > 0)) {
+        await Product.findByIdAndUpdate(item.productId, {
+            $inc: { limitedPieces: item.quantity },
+            $set: { limitedAvailable: true, inStock: true, soldOut: false }
+        });
+    } else {
+        await Product.findByIdAndUpdate(item.productId, {
+            $inc: { stock: item.quantity, totalSold: -item.quantity },
+            $set: { inStock: true, soldOut: false }
+        });
+    }
+    await logInventoryChange(item.productId, item.quantity, type, reason, ref);
 }
 
 function generateOrderNumber() {
@@ -345,8 +407,8 @@ router.post('/', authenticateToken, validate(schemas.order), async (req, res) =>
             if (available < qty) {
                 return res.status(400).json({ success: false, message: `Insufficient stock for "${product.name}". Available: ${available}, requested: ${qty}` });
             }
-            if (!product.preOrder && !product.limitedAvailable) {
-                stockUpdates.push({ productId: product._id, qty });
+            if (!product.preOrder) {
+                stockUpdates.push({ productId: product._id, qty, limited: !!product.limitedAvailable });
             }
 
             const price = product.price;
@@ -401,46 +463,53 @@ router.post('/', authenticateToken, validate(schemas.order), async (req, res) =>
         const total = subtotal + deliveryFee + tax - discountAmount;
         const orderNumber = generateOrderNumber();
 
+        // Reserve stock BEFORE the order is saved so stock can never go negative.
+        const appliedStockUpdates = [];
+        for (const update of stockUpdates) {
+            const ok = await applyStockDeduction(update);
+            if (!ok) {
+                for (const applied of appliedStockUpdates) await restoreStockDeduction(applied);
+                return res.status(409).json({ success: false, message: 'Insufficient stock. Please reduce the quantity or refresh your cart.' });
+            }
+            await logInventoryChange(update.productId, -update.qty, 'order', 'Order placed', orderNumber);
+            appliedStockUpdates.push(update);
+        }
+
         const user = await User.findById(req.user.id).select('name email');
 
-        const order = new Order({
-            orderNumber,
-            user: req.user.id,
-            email: shippingAddress.email || (user ? user.email : ''),
-            items: orderItems,
-            shippingAddress,
-            billingAddress: billingAddress || {},
-            deliveryMethod: {
-                type: deliveryMethod?.type || 'standard',
-                label: deliveryLabel,
-                fee: deliveryFee,
-                estimatedDays: deliveryEstimatedDays,
-                provider: deliveryProvider
-            },
-            subtotal,
-            deliveryFee,
-            tax,
-            total,
-            paymentMethod: paymentMethod || 'cash',
-            couponCode: couponCode || undefined,
-            couponDiscount: discountAmount || undefined,
-            discount: discountAmount || 0,
-            status: 'pending',
-            notes: notes || '',
-            timeline: [{ status: 'pending', note: 'Order placed', timestamp: new Date() }],
-            paymentDetails: { paymentStatus: paymentMethod === 'cash' ? 'pending' : 'pending' }
-        });
-        await order.save();
-
-        for (const update of stockUpdates) {
-            await Product.findByIdAndUpdate(update.productId, {
-                $inc: { stock: -update.qty, totalSold: update.qty }
+        let order;
+        try {
+            order = new Order({
+                orderNumber,
+                user: req.user.id,
+                email: shippingAddress.email || (user ? user.email : ''),
+                items: orderItems,
+                shippingAddress,
+                billingAddress: billingAddress || {},
+                deliveryMethod: {
+                    type: deliveryMethod?.type || 'standard',
+                    label: deliveryLabel,
+                    fee: deliveryFee,
+                    estimatedDays: deliveryEstimatedDays,
+                    provider: deliveryProvider
+                },
+                subtotal,
+                deliveryFee,
+                tax,
+                total,
+                paymentMethod: paymentMethod || 'cash',
+                couponCode: couponCode || undefined,
+                couponDiscount: discountAmount || undefined,
+                discount: discountAmount || 0,
+                status: 'pending',
+                notes: notes || '',
+                timeline: [{ status: 'pending', note: 'Order placed', timestamp: new Date() }],
+                paymentDetails: { paymentStatus: paymentMethod === 'cash' ? 'pending' : 'pending' }
             });
-            const updated = await Product.findById(update.productId);
-            if (updated && updated.stock <= 0 && !updated.preOrder && !updated.limitedAvailable) {
-                await Product.findByIdAndUpdate(update.productId, { $set: { inStock: false, soldOut: true } });
-            }
-            await logInventoryChange(update.productId, -update.qty, 'order', 'Order placed', order.orderNumber);
+            await order.save();
+        } catch (err) {
+            for (const applied of appliedStockUpdates) await restoreStockDeduction(applied);
+            throw err;
         }
 
         const Cart = require('../models/Cart');
@@ -502,11 +571,7 @@ router.post('/:id/return', authenticateToken, requireAdmin, async (req, res) => 
         order.timeline.push({ status: 'returned', note: note || 'Return processed', admin: req.user?.name || req.user?.email || 'admin', timestamp: new Date() });
 
         for (const item of order.items) {
-            await Product.findByIdAndUpdate(item.productId, {
-                $inc: { stock: item.quantity, totalSold: -item.quantity },
-                $set: { inStock: true, soldOut: false }
-            });
-            await logInventoryChange(item.productId, item.quantity, 'return', 'Return processed', order.orderNumber);
+            await restoreOrderStock(item, 'return', 'Return processed', order.orderNumber);
         }
         await order.save();
         res.json({ success: true, data: order });
@@ -539,8 +604,7 @@ router.post('/admin/bulk', authenticateToken, requireAdmin, async (req, res) => 
                     order.timeline.push({ status: value, note: note || `Bulk status update to ${value}`, admin: adminName, timestamp: new Date() });
                     if (value === 'cancelled' && old !== 'cancelled') {
                         for (const item of order.items) {
-                            await Product.findByIdAndUpdate(item.productId, { $inc: { stock: item.quantity, totalSold: -item.quantity }, $set: { inStock: true, soldOut: false } });
-                            await logInventoryChange(item.productId, item.quantity, 'cancel', 'Bulk cancel', order.orderNumber);
+                            await restoreOrderStock(item, 'cancel', 'Bulk cancel', order.orderNumber);
                         }
                     }
                     const user = await User.findById(order.user).select('name email');
@@ -562,8 +626,7 @@ router.post('/admin/bulk', authenticateToken, requireAdmin, async (req, res) => 
                     order.cancelReason = note || 'Bulk cancelled';
                     order.timeline.push({ status: 'cancelled', note: note || 'Bulk cancelled', admin: adminName, timestamp: new Date() });
                     for (const item of order.items) {
-                        await Product.findByIdAndUpdate(item.productId, { $inc: { stock: item.quantity, totalSold: -item.quantity }, $set: { inStock: true, soldOut: false } });
-                        await logInventoryChange(item.productId, item.quantity, 'cancel', 'Bulk cancel', order.orderNumber);
+                        await restoreOrderStock(item, 'cancel', 'Bulk cancel', order.orderNumber);
                     }
                 } else {
                     results.errors.push({ id, message: `Unknown action: ${action}` }); continue;
@@ -646,11 +709,7 @@ router.put('/:id/cancel', authenticateToken, async (req, res) => {
         await order.save();
 
         for (const item of order.items) {
-            await Product.findByIdAndUpdate(item.productId, {
-                $inc: { stock: item.quantity, totalSold: -item.quantity },
-                $set: { inStock: true, soldOut: false }
-            });
-            await logInventoryChange(item.productId, item.quantity, 'cancel', 'Order cancelled by customer', order.orderNumber);
+            await restoreOrderStock(item, 'cancel', 'Order cancelled by customer', order.orderNumber);
         }
 
         res.json({ success: true, data: order });
@@ -680,11 +739,7 @@ router.put('/:id/status', authenticateToken, requireAdmin, async (req, res) => {
 
             if (status === 'cancelled' && oldStatus !== 'cancelled') {
                 for (const item of order.items) {
-                    await Product.findByIdAndUpdate(item.productId, {
-                        $inc: { stock: item.quantity, totalSold: -item.quantity },
-                        $set: { inStock: true, soldOut: false }
-                    });
-                    await logInventoryChange(item.productId, item.quantity, 'cancel', 'Order cancelled by admin', order.orderNumber);
+                    await restoreOrderStock(item, 'cancel', 'Order cancelled by admin', order.orderNumber);
                 }
             }
         }
@@ -781,11 +836,7 @@ router.put('/:id/refund', authenticateToken, requireAdmin, async (req, res) => {
 
             if (oldRefundStatus !== 'completed') {
                 for (const item of order.items) {
-                    await Product.findByIdAndUpdate(item.productId, {
-                        $inc: { stock: item.quantity, totalSold: -item.quantity },
-                        $set: { inStock: true, soldOut: false }
-                    });
-                    await logInventoryChange(item.productId, item.quantity, 'refund', 'Stock restored from refund', order.orderNumber);
+                    await restoreOrderStock(item, 'refund', 'Stock restored from refund', order.orderNumber);
                 }
             }
         } else {

@@ -8,11 +8,9 @@ const { authenticateToken } = require('../middleware/auth');
 const crypto = require('crypto');
 
 function getEffectiveStock(product) {
-    if (product.soldOut) return 0;
     if (product.stock > 0) return product.stock;
     if (product.limitedAvailable && product.limitedPieces > 0) return product.limitedPieces;
     if (product.preOrder) return 999;
-    if (product.inStock) return product.stockThreshold || 5;
     return 0;
 }
 
@@ -30,7 +28,7 @@ router.get('/', authenticateToken, async (req, res) => {
             await wishlist.save();
         }
         const count = items.length;
-        const inStock = items.filter(i => i.productId && i.productId.stock > 0).length;
+        const inStock = items.filter(i => i.productId && getEffectiveStock(i.productId) > 0).length;
         const outOfStock = count - inStock;
         const estimatedValue = items.reduce((sum, i) => sum + (i.productId ? i.productId.price || 0 : 0), 0);
         res.json({ success: true, items, stats: { count, inStock, outOfStock, estimatedValue } });
