@@ -69,7 +69,6 @@ app.use('/api', (req, res, next) => {
   if (req.headers.authorization) return authLimiter(req, res, next);
   return limiter(req, res, next);
 });
-app.use('/api', limiter);
 
 app.get('/api/health', (req, res) => {
   const dbState = mongoose.connection.readyState;
@@ -119,6 +118,7 @@ mongoose.connection.on('disconnected', () => {
 });
 
 const routesPath = path.join(__dirname, 'routes');
+const mountLog = [];
 if (fs.existsSync(routesPath)) {
   const routeFiles = fs.readdirSync(routesPath).filter(f => f.endsWith('.js'));
   console.log(`[INFO] Mounting ${routeFiles.length} route files...`);
@@ -150,11 +150,29 @@ if (fs.existsSync(routesPath)) {
         mounted[plural] = true;
       }
       console.log(`  ✓ /api/${basePath} (+/${plural}) <- ${file}`);
+      mountLog.push(`✓ /api/${basePath} <- ${file}`);
     } catch (err) {
       console.error(`  ✗ Failed to mount ${file}:`, err.message);
+      mountLog.push(`✗ ${file}: ${err.message}`);
     }
   });
 }
+
+app.get('/api/__diag', (req, res) => {
+  const deps = ['qrcode', 'escape-string-regexp'];
+  const resolvable = {};
+  deps.forEach(d => { try { resolvable[d] = require.resolve(d); } catch (e) { resolvable[d] = 'NOT INSTALLED'; } });
+  res.json({
+    success: true,
+    node: process.version,
+    cwd: process.cwd(),
+    dirname: __dirname,
+    routesDir: routesPath,
+    routesDirExists: fs.existsSync(routesPath),
+    mounted: mountLog,
+    deps: resolvable
+  });
+});
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.method} ${req.originalUrl} not found` });
