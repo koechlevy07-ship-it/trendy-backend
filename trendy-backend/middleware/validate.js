@@ -93,7 +93,7 @@ const orderSchema = Joi.object({
         city: Joi.string().trim().min(2).max(100).required(),
         country: Joi.string().trim().min(2).max(100).optional().default('Kenya')
     }).required(),
-    paymentMethod: Joi.string().valid('cash', 'mpesa', 'card', 'bank').optional().default('cash'),
+    paymentMethod: Joi.string().valid('cash', 'mpesa', 'card', 'bank', 'whatsapp').optional().default('cash'),
     discount: Joi.number().min(0).optional().default(0),
     couponCode: Joi.string().trim().allow('').optional(),
     notes: Joi.string().trim().max(500).allow('').optional()
