@@ -297,15 +297,15 @@
         function updateUI() {
             const user = getUser();
             if (user) {
-                userIcon.className = 'fas fa-user-check';
+                if (userIcon) userIcon.className = 'fas fa-user-check';
                 // Update desktop profile dropdown
                 updateProfileDropdown(user);
-                if (authOverlay.style.display === 'flex') showDashboard(user);
+                if (authOverlay && authOverlay.style.display === 'flex') showDashboard(user);
             } else {
-                userIcon.className = 'far fa-user';
+                if (userIcon) userIcon.className = 'far fa-user';
                 // Update desktop profile dropdown
                 updateProfileDropdown(null);
-                if (authOverlay.style.display === 'flex') showAuthForms();
+                if (authOverlay && authOverlay.style.display === 'flex') showAuthForms();
             }
             updateWishlistIcon();
             updateCartBadge();
@@ -423,6 +423,7 @@
         // AUTH MODAL
         // ============================================================
         function openAuthModal() {
+            if (!authOverlay) { window.location.href = '/account.html'; return; }
             authOverlay.style.display = 'flex';
             document.body.classList.add('no-scroll');
             if (isLoggedIn()) {
@@ -437,8 +438,10 @@
             document.body.classList.remove('no-scroll');
         }
 
-        authCloseBtn.addEventListener('click', closeAuthModal);
-        authOverlay.addEventListener('click', function(e) {
+
+        function safeOn(el, evt, fn) { if (el) el.addEventListener(evt, fn); }
+                safeOn(authCloseBtn, 'click', closeAuthModal);
+        safeOn(authOverlay, 'click', function(e) {
             if (e.target === this) closeAuthModal();
         });
 
@@ -478,7 +481,7 @@
             switchDashboardTab('dashboard');
         }
 
-        userBtn.addEventListener('click', openAuthModal);
+        safeOn(userBtn, 'click', openAuthModal);
 
         // Auth tabs
         authTabs.forEach(tab => {
@@ -499,7 +502,7 @@
         });
 
         // Login
-        loginForm.addEventListener('submit', async function(e) {
+        safeOn(loginForm, 'submit', async function(e) {
             e.preventDefault();
             loginError.style.display = 'none';
             const email = loginEmail.value.trim();
@@ -533,7 +536,7 @@
         });
 
         // Register
-        registerForm.addEventListener('submit', async function(e) {
+        safeOn(registerForm, 'submit', async function(e) {
             e.preventDefault();
             registerError.style.display = 'none';
             const name = registerName.value.trim();
@@ -574,7 +577,7 @@
         });
 
         // Logout
-        logoutBtn.addEventListener('click', function() {
+        safeOn(logoutBtn, 'click', function() {
             clearAuth();
             closeAuthModal();
             showToast('👋 Logged out successfully', 'info');
@@ -583,7 +586,7 @@
         });
 
         // Profile Update
-        profileUpdateForm.addEventListener('submit', async function(e) {
+        safeOn(profileUpdateForm, 'submit', async function(e) {
             e.preventDefault();
             profileUpdateMsg.style.display = 'none';
             const name = profileName.value.trim();
@@ -1196,20 +1199,16 @@
         }
 
         function getEffectiveStock(product) {
-            if (product.soldOut) return 0;
             if (product.stock > 0) return product.stock;
             if (product.limitedAvailable && product.limitedPieces > 0) return product.limitedPieces;
             if (product.preOrder) return 999;
-            if (product.inStock) return product.stockThreshold || 5;
             return 0;
         }
 
         function isProductAvailable(product) {
-            if (product.soldOut) return false;
             if (product.stock > 0) return true;
             if (product.limitedAvailable && product.limitedPieces > 0) return true;
             if (product.preOrder) return true;
-            if (product.inStock) return true;
             return false;
         }
 
@@ -1351,8 +1350,8 @@
             document.body.classList.add('no-scroll');
         }
 
-        checkoutCloseBtn.addEventListener('click', closeCheckout);
-        checkoutOverlay.addEventListener('click', function(e) {
+        safeOn(checkoutCloseBtn, 'click', closeCheckout);
+        safeOn(checkoutOverlay, 'click', function(e) {
             if (e.target === this) closeCheckout();
         });
 
@@ -1361,17 +1360,54 @@
             document.body.classList.remove('no-scroll');
         }
 
-        checkoutForm.addEventListener('submit', async function(e) {
+        function buildWhatsAppUrl(items, address, city, subtotal, delivery, total) {
+            let msg = 'Hello Trendy Wardrobe,\n\nI would like to place an order.\n\nOrder details:\n\n';
+            (items || []).forEach(function(item) {
+                msg += 'Product: ' + (item.name || '') + '\n';
+                msg += 'Quantity: ' + (item.quantity || 1) + '\n';
+                if (item.size) msg += 'Size: ' + item.size + '\n';
+                if (item.color) msg += 'Color: ' + item.color + '\n';
+                msg += 'Price: Ksh ' + ((item.price || 0)).toLocaleString() + '\n\n';
+            });
+            msg += 'Subtotal: ' + subtotal + '\n';
+            msg += 'Delivery Address: ' + (address || '') + '\n';
+            msg += 'City: ' + (city || '') + '\n';
+            msg += 'Total: ' + total + '\n\n';
+            msg += 'Please confirm availability and share the available payment methods.\n\nThank you.';
+            return 'https://wa.me/254728985417?text=' + encodeURIComponent(msg);
+        }
+
+        safeOn(document.getElementById('whatsappChatBtn'), 'click', function() {
+            this.href = buildWhatsAppUrl(
+                cartItems,
+                checkoutAddress.value.trim(),
+                checkoutCity.value.trim(),
+                checkoutSubtotal.textContent.trim(),
+                checkoutDelivery.textContent.trim(),
+                checkoutTotal.textContent.trim()
+            );
+        });
+
+        safeOn(checkoutForm, 'submit', async function(e) {
             e.preventDefault();
             const name = checkoutName.value.trim();
             const phone = checkoutPhone.value.trim();
             const address = checkoutAddress.value.trim();
             const city = checkoutCity.value.trim();
             const postcode = document.getElementById('checkoutPostcode')?.value.trim() || '';
+
+            // WhatsApp Ordering: take the customer straight to the WhatsApp chat instead of submitting to the API.
+            // Not gated by shipping fields — details are confirmed in the chat.
+            if (checkoutPayment.value === 'whatsapp') {
+                window.open(buildWhatsAppUrl(cartItems, address, city, checkoutSubtotal.textContent.trim(), checkoutDelivery.textContent.trim(), checkoutTotal.textContent.trim()), '_blank');
+                return;
+            }
+
             if (!name || !phone || !address || !city) {
                 showToast('⚠️ Please fill all required fields', 'error');
                 return;
             }
+
             try {
                 for (const item of cartItems) {
                     const res = await fetch(`${API_URL}/products/${item.id}`);
@@ -1433,7 +1469,7 @@
             }
         });
 
-        orderSuccessDashboard.addEventListener('click', function() {
+        safeOn(orderSuccessDashboard, 'click', function() {
             orderSuccessOverlay.classList.remove('show');
             document.body.classList.remove('no-scroll');
             openAuthModal();
@@ -1448,6 +1484,7 @@
             heroInterval = null;
 
         async function loadHeroImages() {
+            if (!document.getElementById('heroSection')) return;
             try {
                 const res = await fetch(`${API_URL}/homepage/hero`);
                 if (res.ok) {
@@ -1464,6 +1501,7 @@
                 } catch (e) { console.error('Hero fallback error', e); }
             }
             if (heroSlides.length) {
+                buildHeroIndicators();
                 setHeroSlide(heroSlides[0]);
                 if (heroInterval) clearInterval(heroInterval);
                 heroInterval = setInterval(() => {
@@ -1473,10 +1511,28 @@
             }
         }
 
+        function buildHeroIndicators() {
+            const inds = document.getElementById('heroIndicators');
+            if (!inds) return;
+            inds.innerHTML = heroSlides.map((s, i) =>
+                `<button class="hero-dot" data-index="${i}" aria-label="Go to slide ${i + 1}"><span class="dot-num">${String(i + 1).padStart(2, '0')}</span><span class="dot-line"></span></button>`
+            ).join('');
+            inds.querySelectorAll('.hero-dot').forEach(dot => {
+                dot.addEventListener('click', () => {
+                    const i = parseInt(dot.dataset.index, 10);
+                    if (!isNaN(i) && i !== heroIndex && heroSlides[i]) {
+                        heroIndex = i;
+                        setHeroSlide(heroSlides[i]);
+                    }
+                });
+            });
+        }
+
          function setHeroSlide(slide) {
             const hero = document.getElementById('heroSection');
             const heroBg = document.getElementById('heroBg');
             const heroVideo = document.getElementById('heroVideo');
+            if (!hero || !heroBg) return;
             const isMobile = window.innerWidth <= 768;
 
             if (slide.videoUrl && heroVideo) {
@@ -1491,7 +1547,7 @@
                     const imgUrl = slide.mobileImage || slide.desktopImage || '';
                     if (imgUrl) {
                         heroVideo.style.display = 'none';
-                        heroBg.style.backgroundImage = `url(${getImageUrl(imgUrl)})`;
+                        heroBg.style.backgroundImage = `url(${getImageUrl(imgUrl, 800)})`;
                     } else {
                         heroVideo.style.display = '';
                     }
@@ -1501,7 +1557,7 @@
                 heroVideo.classList.add('hidden-video');
                 heroVideo.src = '';
                 if (imgUrl) {
-                    heroBg.style.backgroundImage = `url(${getImageUrl(imgUrl)})`;
+                    heroBg.style.backgroundImage = `url(${getImageUrl(imgUrl, isMobile ? 800 : 1600)})`;
                 }
             }
             const heading = document.getElementById('heroHeading');
@@ -1542,6 +1598,13 @@
                         document.getElementById('productsSection').scrollIntoView({ behavior: 'smooth' });
                     }
                 };
+            }
+            const inds = document.getElementById('heroIndicators');
+            if (inds && inds.children.length) {
+                const idx = heroSlides.indexOf(slide);
+                inds.querySelectorAll('.hero-dot').forEach((dot, i) => {
+                    dot.classList.toggle('active', i === idx);
+                });
             }
         }
 
@@ -2261,15 +2324,16 @@
                 const raw = await res.json();
                 const p = raw.data || raw;
                 currentQVProduct = p;
-                const inStock = !p.soldOut && (p.inStock || p.stock > 0 || p.preOrder || p.limitedAvailable || (p.limitedPieces && p.limitedPieces > 0));
+                const inStock = isProductAvailable(p);
+                const effStock = getEffectiveStock(p);
                 const original = p.originalPrice ? `<span class="original">Ksh ${p.originalPrice.toLocaleString()}</span>` : '';
                 const discount = p.originalPrice && p.originalPrice > p.price
                     ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
                     : 0;
                 const discountBadge = discount ? `<span class="discount">${discount}%</span>` : '';
                 const inStockHtml = inStock
-                    ? (p.stock !== undefined && p.stock <= 5 && p.stock > 0
-                        ? `<span class="stock-status low">Only ${p.stock} left</span>`
+                    ? (effStock !== 999 && effStock <= 5 && effStock > 0
+                        ? `<span class="stock-status low">Only ${effStock} left</span>`
                         : '<span class="stock-status in-stock">In Stock</span>')
                     : '<span class="stock-status out">Out of Stock</span>';
                 const rating = p.rating || 0;
@@ -2327,7 +2391,7 @@
                         </div>
                         ${p.flashSale && p.flashSaleEnd && new Date(p.flashSaleEnd) > new Date() ? `<div style="color:var(--error);font-size:0.85rem;font-weight:600;margin:4px 0;">⚡ Flash sale ends: ${new Date(p.flashSaleEnd).toLocaleString()}</div>` : ''}
                         ${p.installmentEligible && p.installmentPrice ? `<div style="font-size:0.8rem;color:var(--text-secondary);margin:4px 0;background:var(--bg-secondary);padding:6px 10px;border-radius:4px;">💳 Lipa Mdogo Mdogo: ${Math.ceil(p.price / p.installmentPrice)}x Ksh ${p.installmentPrice.toLocaleString()}/mo</div>` : ''}
-                        <div class="qv-stock ${inStock ? 'in-stock' : 'out'}">${inStock ? (p.stock ? `${p.stock} available` : 'In Stock') : 'Out of Stock'}</div>
+                        <div class="qv-stock ${inStock ? 'in-stock' : 'out'}">${inStock ? (effStock !== 999 ? `${effStock} available` : 'In Stock') : 'Out of Stock'}</div>
                         ${p.shortDescription ? `<div style="font-size:0.85rem;color:var(--text-secondary);margin:8px 0;">${escHtml(p.shortDescription)}</div>` : ''}
                         ${p.description ? `<div class="qv-desc">${escHtml(p.description)}</div>` : ''}
                         ${p.sizes && p.sizes.length ? `
@@ -2344,7 +2408,7 @@
                             <label>Quantity</label>
                             <div class="qty-selector">
                                 <button class="qty-btn minus">-</button>
-                                <input type="number" id="qvQty" value="1" min="1" max="${inStock ? (p.stock || 99) : 0}" ${!inStock ? 'disabled' : ''} />
+                                <input type="number" id="qvQty" value="1" min="1" max="${inStock ? Math.min(effStock, 99) : 0}" ${!inStock ? 'disabled' : ''} />
                                 <button class="qty-btn plus">+</button>
                             </div>
                         </div>
@@ -2588,8 +2652,8 @@
             }
         }
 
-        searchBtn.addEventListener('click', () => performSearch());
-        searchInput.addEventListener('keypress', e => { if (e.key === 'Enter') performSearch(); });
+        safeOn(searchBtn, 'click', () => performSearch());
+        safeOn(searchInput, 'keypress', e => { if (e.key === 'Enter') performSearch(); });
 
         // Search icon mobile — opens search overlay with recent searches
         if (searchIconMobile) {
@@ -2646,27 +2710,27 @@
             });
         }
 
-        searchClose.addEventListener('click', () => {
+        safeOn(searchClose, 'click', () => {
             searchOverlay.classList.remove('open');
             document.body.classList.remove('no-scroll');
         });
-        searchOverlay.addEventListener('click', e => {
+        safeOn(searchOverlay, 'click', e => {
             if (e.target === searchOverlay || (!e.target.closest('.search-panel') && !e.target.closest('.search-result-item') && !e.target.closest('.search-tag') && !e.target.closest('.search-recent-item'))) {
                 searchOverlay.classList.remove('open');
                 document.body.classList.remove('no-scroll');
             }
         });
-        searchOverlaySubmit.addEventListener('click', () => {
+        safeOn(searchOverlaySubmit, 'click', () => {
             const q = searchOverlayInput.value.trim();
             if (q) { addRecentSearch(q); performSearch(q); }
         });
-        searchOverlayInput.addEventListener('keypress', e => {
+        safeOn(searchOverlayInput, 'keypress', e => {
             if (e.key === 'Enter') {
                 const q = searchOverlayInput.value.trim();
                 if (q) { addRecentSearch(q); performSearch(q); }
             }
         });
-        searchOverlayInput.addEventListener('input', function() {
+        safeOn(searchOverlayInput, 'input', function() {
             const q = this.value.trim();
             const liveResults = document.getElementById('searchLiveResults');
             const suggestions = document.getElementById('searchSuggestions');
@@ -2741,8 +2805,8 @@
         if (hamburgerBtn) {
             hamburgerBtn.addEventListener('click', openDrawer);
         }
-        closeDrawer.addEventListener('click', closeDrawerFn);
-        drawerOverlay.addEventListener('click', closeDrawerFn);
+        safeOn(closeDrawer, 'click', closeDrawerFn);
+        safeOn(drawerOverlay, 'click', closeDrawerFn);
 
         document.querySelectorAll('.drawer-toggle').forEach(toggle => {
             toggle.addEventListener('click', function() {
@@ -2762,9 +2826,9 @@
             });
         });
 
-        drawerHome.addEventListener('click', (e) => { e.preventDefault();
+        safeOn(drawerHome, 'click', (e) => { e.preventDefault();
             showHomeSection(); });
-        drawerContact.addEventListener('click', (e) => {
+        safeOn(drawerContact, 'click', (e) => {
             window.location.href = '/contact.html'; });
 
         // New drawer items
@@ -2850,7 +2914,7 @@
         // ============================================================
         // SHOP NOW BUTTON
         // ============================================================
-        document.getElementById('shopNowBtn').addEventListener('click', () => {
+        safeOn(document.getElementById('shopNowBtn'), 'click', () => {
             showHomeSection();
             document.getElementById('productsSection').scrollIntoView({ behavior: 'smooth' });
         });
@@ -3072,7 +3136,7 @@
             });
         });
 
-        document.getElementById('sortSelect').addEventListener('change', function() {
+        safeOn(document.getElementById('sortSelect'), 'change', function() {
             currentSort = this.value;
             setFilterToURL(currentFilter, currentGender, lastFetchSearch, currentSort);
             loadProducts(currentFilter, currentGender);
@@ -3975,6 +4039,8 @@
                 if (mp) mp.style.display = this.value === 'mpesa' ? 'block' : 'none';
                 if (cd) cd.style.display = this.value === 'card' ? 'block' : 'none';
                 if (bk) bk.style.display = this.value === 'bank' ? 'block' : 'none';
+                var wa = document.getElementById('whatsappSupport');
+                if (wa) wa.style.display = this.value === 'whatsapp' ? 'block' : 'none';
             });
         }
 

@@ -10,19 +10,15 @@ function escHtml(str) {
 
 // ---- Stock Helpers ----
 function getEffectiveStock(product) {
-    if (product.soldOut) return 0;
     if (product.stock > 0) return product.stock;
     if (product.limitedAvailable && product.limitedPieces > 0) return product.limitedPieces;
     if (product.preOrder) return 999;
-    if (product.inStock) return product.stockThreshold || 5;
     return 0;
 }
 function isProductAvailable(product) {
-    if (product.soldOut) return false;
     if (product.stock > 0) return true;
     if (product.limitedAvailable && product.limitedPieces > 0) return true;
     if (product.preOrder) return true;
-    if (product.inStock) return true;
     return false;
 }
 
@@ -1406,6 +1402,38 @@ document.getElementById('checkoutPayment').addEventListener('change', function()
     const map = { mpesa: 'mpesaInstructions', card: 'cardInstructions', bank: 'bankInstructions' };
     const el = document.getElementById(map[this.value]);
     if (el) el.style.display = 'block';
+    const wa = document.getElementById('whatsappSupport');
+    if (wa) wa.style.display = this.value === 'whatsapp' ? 'block' : 'none';
+});
+
+function buildWhatsAppUrl(items, address, city, subtotal, delivery, total) {
+    let msg = 'Hello Trendy Wardrobe,\n\nI would like to place an order.\n\nOrder details:\n\n';
+    (items || []).forEach(function(item) {
+        msg += 'Product: ' + (item.name || '') + '\n';
+        msg += 'Quantity: ' + (item.quantity || 1) + '\n';
+        if (item.size) msg += 'Size: ' + item.size + '\n';
+        if (item.color) msg += 'Color: ' + item.color + '\n';
+        msg += 'Price: Ksh ' + ((item.price || 0)).toLocaleString() + '\n\n';
+    });
+    msg += 'Subtotal: ' + subtotal + '\n';
+    msg += 'Delivery Address: ' + (address || '') + '\n';
+    msg += 'City: ' + (city || '') + '\n';
+    msg += 'Total: ' + total + '\n\n';
+    msg += 'Please confirm availability and share the available payment methods.\n\nThank you.';
+    return 'https://wa.me/254728985417?text=' + encodeURIComponent(msg);
+}
+
+document.getElementById('whatsappChatBtn').addEventListener('click', function() {
+    const addressEl = document.getElementById('checkoutAddress');
+    const cityEl = document.getElementById('checkoutCity');
+    this.href = buildWhatsAppUrl(
+        getCart(),
+        addressEl ? addressEl.value.trim() : '',
+        cityEl ? cityEl.value.trim() : '',
+        document.getElementById('checkoutSubtotal') ? document.getElementById('checkoutSubtotal').textContent.trim() : '',
+        document.getElementById('checkoutDelivery') ? document.getElementById('checkoutDelivery').textContent.trim() : '',
+        document.getElementById('checkoutTotal') ? document.getElementById('checkoutTotal').textContent.trim() : ''
+    );
 });
 
 function renderCheckout() {
@@ -1457,6 +1485,23 @@ document.getElementById('checkoutForm').addEventListener('submit', async functio
     if (!isLoggedIn()) { showToast('Please log in', 'error'); return; }
     const items = getCart();
     if (!items.length) { showToast('Cart is empty', 'error'); return; }
+
+    const addressEl = document.getElementById('checkoutAddress');
+    const cityEl = document.getElementById('checkoutCity');
+
+    // WhatsApp Ordering: take the customer straight to the WhatsApp chat instead of submitting to the API.
+    // Not gated by shipping fields — details are confirmed in the chat.
+    if ((document.getElementById('checkoutPayment')?.value || '') === 'whatsapp') {
+        window.open(buildWhatsAppUrl(getCart(), addressEl ? addressEl.value.trim() : '', cityEl ? cityEl.value.trim() : '', document.getElementById('checkoutSubtotal') ? document.getElementById('checkoutSubtotal').textContent.trim() : '', document.getElementById('checkoutDelivery') ? document.getElementById('checkoutDelivery').textContent.trim() : '', document.getElementById('checkoutTotal') ? document.getElementById('checkoutTotal').textContent.trim() : ''), '_blank');
+        return;
+    }
+
+    const nameEl = document.getElementById('checkoutName');
+    const phoneEl = document.getElementById('checkoutPhone');
+    if (!nameEl?.value.trim() || !phoneEl?.value.trim() || !addressEl?.value.trim() || !cityEl?.value.trim()) {
+        showToast('Please fill all required fields', 'error');
+        return;
+    }
 
     const btn = document.getElementById('placeOrderBtn');
     btn.disabled = true;

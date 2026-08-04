@@ -2,8 +2,6 @@
 // SHOPPING CART PAGE — Trendy Wardrobe
 // ============================================================
 
-const API_URL = 'https://trendy-backend-jq27.onrender.com/api';
-
 // ---- Helpers ----
 function escHtml(str) {
     if (str == null) return '';
@@ -12,36 +10,18 @@ function escHtml(str) {
 
 function $(id) { return document.getElementById(id); }
 
+// ---- Stock Helpers ----
 function getEffectiveStock(product) {
-    if (product.soldOut) return 0;
     if (product.stock > 0) return product.stock;
     if (product.limitedAvailable && product.limitedPieces > 0) return product.limitedPieces;
     if (product.preOrder) return 999;
-    if (product.inStock) return product.stockThreshold || 5;
     return 0;
 }
-
 function isProductAvailable(product) {
-    if (product.soldOut) return false;
     if (product.stock > 0) return true;
     if (product.limitedAvailable && product.limitedPieces > 0) return true;
     if (product.preOrder) return true;
-    if (product.inStock) return true;
     return false;
-}
-
-function getImageUrl(path, width) {
-    if (!path) return '';
-    let url = path.startsWith('http') ? path : path;
-    if (url.includes('res.cloudinary.com') && !url.includes('/upload/')) return url;
-    if (url.includes('res.cloudinary.com')) {
-        const parts = url.split('/upload/');
-        if (parts.length === 2) {
-            const w = width || 400;
-            url = parts[0] + '/upload/f_webp,q_auto,w_' + w + '/' + parts[1];
-        }
-    }
-    return url;
 }
 
 // ---- Auth ----
@@ -227,7 +207,7 @@ function renderGuestPrompt() {
                 size: i.size || '',
                 color: i.color || '',
                 image: i.image || '',
-                stock: 99,
+                stock: i.stock || 99,
                 inStock: true
             })),
             savedForLater: [],
@@ -294,7 +274,7 @@ function renderCartItem(item, idx) {
     const p = item.productId || item;
     const pId = p._id || item._id || item.id || '';
     const img = item.image || (p.images && p.images[0]) || '';
-    const imgUrl = getImageUrl(img, 400);
+    const imgUrl = getImageUrl(img, 600);
     const name = item.name || p.name || 'Product';
     const brand = item.brand || p.brand || '';
     const category = item.category || p.category || '';
@@ -306,7 +286,7 @@ function renderCartItem(item, idx) {
     const qty = item.quantity || 1;
     const size = item.size || '';
     const color = item.color || '';
-    const stock = item.stock !== undefined ? item.stock : (p.stock !== undefined ? p.stock : 99);
+    const stock = item.stock !== undefined ? item.stock : (p._id ? (typeof getEffectiveStock === 'function' ? getEffectiveStock(p) : (p.stock || 99)) : 99);
     const inStock = stock > 0;
     const delivery = item.deliveryEstimate || p.deliveryEstimate || '2-5 business days';
     const itemId = item._id || idx;
@@ -319,38 +299,41 @@ function renderCartItem(item, idx) {
 
     return `
         <div class="cart-item" data-item-id="${itemId}" data-product-id="${pId}" data-idx="${idx}">
-            <a href="/product-details.html?id=${pId}" class="cart-item-img-wrap">
-                <img src="${imgUrl || 'https://placehold.co/300x400/FAF9F6/C8A35A?text=Product'}" alt="${escHtml(name)}" loading="lazy" />
-            </a>
-            <div class="cart-item-details">
-                ${brand ? `<div class="cart-item-brand">${escHtml(brand)}</div>` : ''}
-                <a href="/product-details.html?id=${pId}" class="cart-item-name">${escHtml(name)}</a>
-                <div class="cart-item-meta">
-                    ${sku ? `<span><strong>SKU:</strong> ${escHtml(sku)}</span>` : ''}
-                    ${category ? `<span><strong>Category:</strong> ${escHtml(category)}</span>` : ''}
-                    ${size ? `<span><strong>Size:</strong> ${escHtml(size)}</span>` : ''}
-                    ${color ? `<span><strong>Color:</strong> ${escHtml(color)}</span>` : ''}
+            <div class="cart-item-swipe-delete"><i class="fas fa-trash-alt"></i></div>
+            <div class="cart-item-inner">
+                <a href="/product-details.html?id=${pId}" class="cart-item-img-wrap">
+                    <img src="${imgUrl || 'https://placehold.co/300x400/FAF9F6/C8A35A?text=Product'}" alt="${escHtml(name)}" loading="lazy" />
+                </a>
+                <div class="cart-item-details">
+                    ${brand ? `<div class="cart-item-brand">${escHtml(brand)}</div>` : ''}
+                    <a href="/product-details.html?id=${pId}" class="cart-item-name">${escHtml(name)}</a>
+                    <div class="cart-item-meta">
+                        ${sku ? `<span><strong>SKU:</strong> ${escHtml(sku)}</span>` : ''}
+                        ${category ? `<span><strong>Category:</strong> ${escHtml(category)}</span>` : ''}
+                        ${size ? `<span><strong>Size:</strong> ${escHtml(size)}</span>` : ''}
+                        ${color ? `<span><strong>Color:</strong> ${escHtml(color)}</span>` : ''}
+                    </div>
+                    ${stockHtml}
+                    <div class="cart-item-delivery"><i class="fas fa-truck"></i> Est. delivery: ${escHtml(delivery)}</div>
+                    <div class="cart-item-actions">
+                        <button class="cart-item-action-btn save" data-action="save-for-later"><i class="far fa-bookmark"></i> Save for Later</button>
+                        <button class="cart-item-action-btn wishlist" data-action="move-to-wishlist"><i class="far fa-heart"></i> Move to Wishlist</button>
+                        <button class="cart-item-action-btn remove" data-action="remove"><i class="far fa-trash-alt"></i> Remove</button>
+                    </div>
                 </div>
-                ${stockHtml}
-                <div class="cart-item-delivery"><i class="fas fa-truck"></i> Est. delivery: ${escHtml(delivery)}</div>
-                <div class="cart-item-actions">
-                    <button class="cart-item-action-btn save" data-action="save-for-later"><i class="far fa-bookmark"></i> Save for Later</button>
-                    <button class="cart-item-action-btn wishlist" data-action="move-to-wishlist"><i class="far fa-heart"></i> Move to Wishlist</button>
-                    <button class="cart-item-action-btn remove" data-action="remove"><i class="far fa-trash-alt"></i> Remove</button>
+                <div class="cart-item-right">
+                    <div class="cart-item-price">
+                        Ksh ${price.toLocaleString()}
+                        ${hasDiscount ? `<span class="original">Ksh ${origPrice.toLocaleString()}</span>` : ''}
+                        ${discountPct ? `<span class="cart-item-discount">-${discountPct}%</span>` : ''}
+                    </div>
+                    <div class="cart-qty-selector">
+                        <button class="cart-qty-btn cart-qty-minus" ${qty <= 1 ? 'disabled' : ''}>−</button>
+                        <input type="number" class="cart-qty-input" value="${qty}" min="1" max="${stock}" readonly />
+                        <button class="cart-qty-btn cart-qty-plus" ${qty >= stock ? 'disabled' : ''}>+</button>
+                    </div>
+                    <div class="cart-item-subtotal"><strong>Ksh ${lineTotal.toLocaleString()}</strong></div>
                 </div>
-            </div>
-            <div class="cart-item-right">
-                <div class="cart-item-price">
-                    Ksh ${price.toLocaleString()}
-                    ${hasDiscount ? `<span class="original">Ksh ${origPrice.toLocaleString()}</span>` : ''}
-                    ${discountPct ? `<span class="cart-item-discount">-${discountPct}%</span>` : ''}
-                </div>
-                <div class="cart-qty-selector">
-                    <button class="cart-qty-btn cart-qty-minus" ${qty <= 1 ? 'disabled' : ''}>−</button>
-                    <input type="number" class="cart-qty-input" value="${qty}" min="1" max="${Math.max(stock, 99)}" readonly />
-                    <button class="cart-qty-btn cart-qty-plus" ${qty >= stock ? 'disabled' : ''}>+</button>
-                </div>
-                <div class="cart-item-subtotal"><strong>Ksh ${lineTotal.toLocaleString()}</strong></div>
             </div>
         </div>`;
 }
@@ -514,6 +497,42 @@ function bindCartItemEvents() {
             else if (action === 'remove') removeItem(itemId);
         });
     });
+
+    // Swipe-to-delete on mobile
+    if (window.innerWidth <= 768) {
+        document.querySelectorAll('.cart-item').forEach(item => {
+            const inner = item.querySelector('.cart-item-inner');
+            const deleteBtn = item.querySelector('.cart-item-swipe-delete');
+            if (!inner || !deleteBtn) return;
+            let startX = 0, currentX = 0, swiping = false;
+            inner.addEventListener('touchstart', e => {
+                startX = e.touches[0].clientX;
+                currentX = 0;
+                swiping = false;
+            }, { passive: true });
+            inner.addEventListener('touchmove', e => {
+                currentX = e.touches[0].clientX - startX;
+                if (currentX < -10) {
+                    swiping = true;
+                    item.classList.add('swiping');
+                    const x = Math.max(currentX, -80);
+                    inner.style.transform = `translateX(${x}px)`;
+                }
+            }, { passive: true });
+            inner.addEventListener('touchend', () => {
+                item.classList.remove('swiping');
+                if (currentX < -60) {
+                    inner.style.transform = 'translateX(-72px)';
+                } else {
+                    inner.style.transform = '';
+                }
+                swiping = false;
+            }, { passive: true });
+            deleteBtn.addEventListener('click', () => {
+                removeItem(item.dataset.itemId);
+            });
+        });
+    }
 }
 
 // ============================================================
@@ -527,7 +546,8 @@ async function updateQuantity(itemEl, newQty) {
         const items = getLocalCart();
         const idx = parseInt(itemEl.dataset.idx);
         if (items[idx]) {
-            items[idx].quantity = Math.max(1, newQty);
+            const maxStock = items[idx].stock || 99;
+            items[idx].quantity = Math.max(1, Math.min(newQty, maxStock));
             setLocalCart(items);
             loadCart();
         }
@@ -767,7 +787,7 @@ async function loadRelatedProducts() {
 }
 
 function renderProductCard(p) {
-    const img = p.images?.[0] ? getImageUrl(p.images[0], 400) : 'https://placehold.co/300x400/FAF9F6/C8A35A?text=Product';
+    const img = p.images?.[0] ? getImageUrl(p.images[0], 600) : 'https://placehold.co/300x400/FAF9F6/C8A35A?text=Product';
     const discount = p.originalPrice && p.originalPrice > p.price ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0;
     const stars = Array.from({length: 5}, (_, i) => `<i class="fas fa-star ${i < Math.round(p.rating||0) ? '' : 'empty'}"></i>`).join('');
     return `
@@ -775,7 +795,7 @@ function renderProductCard(p) {
             <div class="product-image-wrap">
                 <img src="${img}" alt="${escHtml(p.name)}" loading="lazy" />
                 ${discount ? `<span class="badge-discount">-${discount}%</span>` : ''}
-                ${p.stock !== undefined && p.stock < 1 ? '<span class="badge-out">Out of Stock</span>' : ''}
+                ${!isProductAvailable(p) ? '<span class="badge-out">Out of Stock</span>' : ''}
             </div>
             <div class="product-info">
                 <div class="product-brand">${escHtml(p.brand || p.category || 'Trendy Wardrobe')}</div>
@@ -956,6 +976,38 @@ $('checkoutPayment')?.addEventListener('change', function() {
     const map = { mpesa: 'mpesaInstructions', card: 'cardInstructions', bank: 'bankInstructions' };
     const el = $(map[this.value]);
     if (el) el.style.display = 'block';
+    const wa = $('whatsappSupport');
+    if (wa) wa.style.display = this.value === 'whatsapp' ? 'block' : 'none';
+});
+
+function buildWhatsAppUrl(items, address, city, subtotal, delivery, total) {
+    let msg = 'Hello Trendy Wardrobe,\n\nI would like to place an order.\n\nOrder details:\n\n';
+    (items || []).forEach(function(item) {
+        msg += 'Product: ' + (item.name || '') + '\n';
+        msg += 'Quantity: ' + (item.quantity || 1) + '\n';
+        if (item.size) msg += 'Size: ' + item.size + '\n';
+        if (item.color) msg += 'Color: ' + item.color + '\n';
+        msg += 'Price: Ksh ' + ((item.price || 0)).toLocaleString() + '\n\n';
+    });
+    msg += 'Subtotal: ' + subtotal + '\n';
+    msg += 'Delivery Address: ' + (address || '') + '\n';
+    msg += 'City: ' + (city || '') + '\n';
+    msg += 'Total: ' + total + '\n\n';
+    msg += 'Please confirm availability and share the available payment methods.\n\nThank you.';
+    return 'https://wa.me/254728985417?text=' + encodeURIComponent(msg);
+}
+
+$('whatsappChatBtn')?.addEventListener('click', function() {
+    const addressEl = $('checkoutAddress');
+    const cityEl = $('checkoutCity');
+    this.href = buildWhatsAppUrl(
+        getLocalCart(),
+        addressEl ? addressEl.value.trim() : '',
+        cityEl ? cityEl.value.trim() : '',
+        $('checkoutSubtotal') ? $('checkoutSubtotal').textContent.trim() : '',
+        $('checkoutDelivery') ? $('checkoutDelivery').textContent.trim() : '',
+        $('checkoutTotal') ? $('checkoutTotal').textContent.trim() : ''
+    );
 });
 
 function renderCheckout() {
@@ -1008,15 +1060,33 @@ $('checkoutForm')?.addEventListener('submit', async function(e) {
     const items = getLocalCart();
     if (!items.length) { showToast('Cart is empty', 'error'); return; }
 
+    const addressEl = $('checkoutAddress');
+    const cityEl = $('checkoutCity');
+
+    // WhatsApp Ordering: take the customer straight to the WhatsApp chat instead of submitting to the API.
+    // Not gated by shipping fields — details are confirmed in the chat.
+    if (($('checkoutPayment')?.value || '') === 'whatsapp') {
+        window.open(buildWhatsAppUrl(getLocalCart(), addressEl ? addressEl.value.trim() : '', cityEl ? cityEl.value.trim() : '', $('checkoutSubtotal') ? $('checkoutSubtotal').textContent.trim() : '', $('checkoutDelivery') ? $('checkoutDelivery').textContent.trim() : '', $('checkoutTotal') ? $('checkoutTotal').textContent.trim() : ''), '_blank');
+        return;
+    }
+
+    const nameEl = $('checkoutName');
+    const phoneEl = $('checkoutPhone');
+    if (!nameEl?.value.trim() || !phoneEl?.value.trim() || !addressEl?.value.trim() || !cityEl?.value.trim()) {
+        showToast('Please fill all required fields', 'error');
+        return;
+    }
+
     const btn = $('placeOrderBtn');
     btn.disabled = true; btn.textContent = 'Placing Order...';
 
     try {
         for (const item of items) {
+            if (!item.id) continue;
             const res = await fetch(`${API_URL}/products/${item.id}`);
             const raw = await res.json();
             const p = raw.data || raw;
-            if (getEffectiveStock(p) < (item.quantity || 1)) {
+            if (!isProductAvailable(p) || getEffectiveStock(p) < (item.quantity || 1)) {
                 showToast(`Insufficient stock for ${p.name}`, 'error');
                 btn.disabled = false; btn.textContent = 'Place Order'; return;
             }
@@ -1027,12 +1097,14 @@ $('checkoutForm')?.addEventListener('submit', async function(e) {
             shippingAddress: {
                 fullName: $('checkoutName').value.trim(),
                 phone: $('checkoutPhone').value.trim(),
+                street: $('checkoutAddress').value.trim(),
                 address: $('checkoutAddress').value.trim(),
                 city: $('checkoutCity').value.trim()
             },
             total: parseFloat($('checkoutTotal').textContent.replace('Ksh ','').replace(/,/g,'')),
             paymentMethod: $('checkoutPayment').value,
-            coupon: appliedCoupon ? appliedCoupon.code : undefined
+            couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+            couponDiscount: appliedCoupon ? appliedCoupon.discount : undefined
         };
 
         const res = await fetch(`${API_URL}/orders`, {
@@ -1050,10 +1122,15 @@ $('checkoutForm')?.addEventListener('submit', async function(e) {
         $('discountRow').style.display = 'none';
         closeCheckout();
 
-        $('orderNumberDisplay').textContent = `#${data.order?.orderNumber || data.order?._id?.toString().slice(-8).toUpperCase() || 'TW-000001'}`;
+        const orderObj = data.data || data.order || data;
+        $('orderNumberDisplay').textContent = `#${orderObj.orderNumber || String(orderObj._id || '').slice(-8).toUpperCase() || 'TW-000001'}`;
         $('orderSuccessOverlay').classList.add('show');
         showToast('Order placed successfully!', 'success');
         loadCart();
+
+        if (($('checkoutPayment')?.value || '') === 'mpesa' && orderObj._id) {
+            setTimeout(() => showMpesaPayment(orderObj), 500);
+        }
     } catch (err) {
         showToast(err.message, 'error');
     } finally {
@@ -1167,6 +1244,10 @@ async function loadSocialLinks() {
         const drawerEl = $('drawerSocialLinks');
         if (footerEl) footerEl.innerHTML = html;
         if (drawerEl) drawerEl.innerHTML = html;
+        if (links.whatsapp && links.whatsapp.enabled && links.whatsapp.url) {
+            const floater = document.getElementById('floatingWhatsApp');
+            if (floater) { floater.href = links.whatsapp.url; floater.classList.remove('hidden-wa'); }
+        }
     } catch(e) {}
 }
 
@@ -1207,4 +1288,148 @@ document.addEventListener('DOMContentLoaded', () => {
     $('cartEmptyShopBtn')?.addEventListener('click', () => window.location.href = '/');
     $('cartGuestLoginBtn')?.addEventListener('click', openAuthModal);
     $('cartGuestRegisterBtn')?.addEventListener('click', () => { openAuthModal(); setTimeout(() => document.querySelector('[data-tab="register"]')?.click(), 100); });
+
+    initMobileBottomNav();
+    initVirtualKeyboardHandler();
+});
+
+function initMobileBottomNav() {
+    var mql = window.matchMedia('(max-width: 768px)');
+    var nav = document.getElementById('mobileBottomNav');
+    function applyMobileNav(e) { if (nav) nav.style.display = e.matches ? 'flex' : 'none'; }
+    mql.addEventListener('change', applyMobileNav);
+    applyMobileNav(mql);
+    var navBtns = nav ? nav.querySelectorAll('[data-nav]') : [];
+    var currentActive = null;
+    function setActive(key) {
+        if (currentActive === key) return;
+        navBtns.forEach(function(b) { b.classList.remove('active'); });
+        currentActive = key;
+        var btn = nav ? nav.querySelector('[data-nav="' + key + '"]') : null;
+        if (btn) btn.classList.add('active');
+    }
+    function clearActive() { navBtns.forEach(function(b) { b.classList.remove('active'); }); currentActive = null; }
+    var cartOverlay = document.getElementById('miniCartOverlay');
+    if (cartOverlay && typeof MutationObserver !== 'undefined') {
+        new MutationObserver(function() {
+            if (cartOverlay.classList.contains('show')) setActive('cart');
+            else if (currentActive === 'cart') clearActive();
+        }).observe(cartOverlay, { attributes: true, attributeFilter: ['class'] });
+    }
+    var authOverlay = document.getElementById('authOverlay');
+    if (authOverlay && typeof MutationObserver !== 'undefined') {
+        new MutationObserver(function() {
+            if (authOverlay.style.display === 'flex') setActive('account');
+            else if (currentActive === 'account') clearActive();
+        }).observe(authOverlay, { attributes: true, attributeFilter: ['style'] });
+    }
+}
+
+function initVirtualKeyboardHandler() {
+    if (!window.visualViewport) return;
+    var fixedEls = [document.getElementById('mobileBottomNav'), document.querySelector('.floating-whatsapp'), document.getElementById('backToTop')].filter(Boolean);
+    window.visualViewport.addEventListener('resize', function() {
+        var isKeyboard = window.visualViewport.height < window.innerHeight * 0.75;
+        fixedEls.forEach(function(el) { el.style.transform = isKeyboard ? 'translateY(100vh)' : ''; el.style.transition = 'transform 0.2s ease'; });
+    });
+    window.visualViewport.addEventListener('focusout', function() { fixedEls.forEach(function(el) { el.style.transform = ''; }); });
+}
+
+// ============================================================
+// M-PESA PAYMENT
+// ============================================================
+const mpesaOverlay = document.getElementById('mpesaPaymentOverlay');
+const mpesaPhoneInput = document.getElementById('mpesaPhoneInput');
+const mpesaPayBtn = document.getElementById('mpesaPayBtn');
+const mpesaCancelBtn = document.getElementById('mpesaCancelBtn');
+const mpesaOrderDisplay = document.getElementById('mpesaOrderDisplay');
+const mpesaPaymentStatus = document.getElementById('mpesaPaymentStatus');
+let mpesaOrderId = null;
+
+function showMpesaPayment(order) {
+    mpesaOrderId = order._id;
+    mpesaOrderDisplay.textContent = `#${order.orderNumber || 'TW-' + order._id.slice(-8).toUpperCase()}`;
+    if ($('checkoutPhone')) mpesaPhoneInput.value = $('checkoutPhone').value;
+    mpesaPaymentStatus.style.display = 'none';
+    mpesaPayBtn.style.display = 'block';
+    mpesaPayBtn.disabled = false;
+    mpesaPayBtn.textContent = 'Pay with M-Pesa';
+    mpesaOverlay.style.display = 'flex';
+}
+
+function closeMpesaPayment() {
+    mpesaOverlay.style.display = 'none';
+}
+
+if (mpesaCancelBtn) mpesaCancelBtn.addEventListener('click', closeMpesaPayment);
+if (mpesaOverlay) mpesaOverlay.addEventListener('click', function(e) {
+    if (e.target === this) closeMpesaPayment();
+});
+
+if (mpesaPayBtn) mpesaPayBtn.addEventListener('click', async function() {
+    let phone = mpesaPhoneInput.value.trim();
+    if (!phone) {
+        mpesaPhoneInput.style.borderColor = 'red';
+        showToast('Please enter your M-Pesa phone number', 'error');
+        return;
+    }
+    mpesaPhoneInput.style.borderColor = '';
+    mpesaPayBtn.disabled = true;
+    mpesaPayBtn.textContent = 'Sending prompt...';
+    mpesaPaymentStatus.style.display = 'none';
+
+    try {
+        const res = await fetch(`${API_URL}/orders/${mpesaOrderId}/pay-mpesa`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phoneNumber: phone })
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message || 'Payment failed');
+
+        mpesaPaymentStatus.style.display = 'block';
+        mpesaPaymentStatus.style.background = '#e8f5e9';
+        mpesaPaymentStatus.style.color = '#2e7d32';
+        mpesaPaymentStatus.innerHTML = `<strong>Prompt Sent!</strong><br><span style="font-size:0.8rem;">${result.message || 'Check your phone for the M-Pesa prompt.'}</span>`;
+        mpesaPayBtn.style.display = 'none';
+        showToast('M-Pesa prompt sent to your phone', 'success');
+
+        let pollCount = 0;
+        const pollInterval = setInterval(async () => {
+            pollCount++;
+            try {
+                const pollRes = await fetch(`${API_URL}/orders/${mpesaOrderId}/verify-payment`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                const pollData = await pollRes.json();
+                if (pollData.success && pollData.data) {
+                    if (pollData.data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        mpesaPaymentStatus.innerHTML = '<strong>Payment Confirmed!</strong><br><span style="font-size:0.8rem;">Your M-Pesa payment was successful.</span>';
+                        mpesaPaymentStatus.style.background = '#e8f5e9';
+                        mpesaPaymentStatus.style.color = '#2e7d32';
+                        showToast('Payment confirmed! Thank you.', 'success');
+                        setTimeout(closeMpesaPayment, 3000);
+                    } else if (pollData.data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        mpesaPaymentStatus.innerHTML = '<strong>Payment Failed</strong><br><span style="font-size:0.8rem;">The payment was not completed. Please try again.</span>';
+                        mpesaPaymentStatus.style.background = '#fff3f3';
+                        mpesaPaymentStatus.style.color = '#dc2626';
+                        mpesaPayBtn.style.display = 'block';
+                        mpesaPayBtn.disabled = false;
+                        mpesaPayBtn.textContent = 'Retry Payment';
+                    }
+                }
+            } catch (e) { /* ignore poll errors */ }
+            if (pollCount > 30) { clearInterval(pollInterval); }
+        }, 10000);
+    } catch (err) {
+        mpesaPaymentStatus.style.display = 'block';
+        mpesaPaymentStatus.style.background = '#fff3f3';
+        mpesaPaymentStatus.style.color = '#dc2626';
+        mpesaPaymentStatus.innerHTML = `<strong>Payment Error</strong><br><span style="font-size:0.8rem;">${err.message}</span>`;
+        mpesaPayBtn.disabled = false;
+        mpesaPayBtn.textContent = 'Try Again';
+    }
 });
