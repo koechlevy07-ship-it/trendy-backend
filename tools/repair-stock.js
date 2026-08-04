@@ -28,7 +28,7 @@ function loadEnv(file) {
 }
 
 const env = loadEnv(path.join(__dirname, '..', 'trendy-backend', '.env'));
-const MONGODB_URI = process.env.MONGODB_URI || env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI_DIRECT || process.env.MONGODB_URI || env.MONGODB_URI;
 if (!MONGODB_URI) {
     console.error('MONGODB_URI not found. Check trendy-backend/.env');
     process.exit(1);
