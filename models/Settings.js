@@ -76,6 +76,7 @@ const settingsSchema = new mongoose.Schema({
     deliveryFee: { type: Number, default: 150 },
     freeDeliveryThreshold: { type: Number, default: 0 },
     paymentMethods: { type: [String], default: ['Cash on Delivery'] },
+    storefrontPaymentMethods: { type: mongoose.Schema.Types.Mixed, default: { cash: true, whatsapp: true, mpesa: false, card: false, bank: false } },
     heroImages: { type: [String], default: [] },
     menImage: { type: String, default: '' },
     womenImage: { type: String, default: '' },

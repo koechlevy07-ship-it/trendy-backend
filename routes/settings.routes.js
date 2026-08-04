@@ -166,6 +166,26 @@ router.get('/heroImages', async (req, res) => {
     }
 });
 
+// GET /api/settings/payment-methods — storefront payment methods enabled by admin
+router.get('/payment-methods', async (req, res) => {
+    try {
+        const s = await getSettings();
+        const cfg = (s.storefrontPaymentMethods && typeof s.storefrontPaymentMethods === 'object') ? s.storefrontPaymentMethods : {};
+        const ALL = [
+            { value: 'cash', label: 'Cash on Delivery' },
+            { value: 'whatsapp', label: 'WhatsApp Ordering' },
+            { value: 'mpesa', label: 'M-Pesa' },
+            { value: 'card', label: 'Card Payment' },
+            { value: 'bank', label: 'Bank Transfer' }
+        ];
+        const isEnabled = (v) => (v === 'cash' || v === 'whatsapp') ? cfg[v] !== false : cfg[v] === true;
+        const methods = ALL.filter(m => isEnabled(m.value));
+        res.json({ success: true, data: methods });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
 // GET /api/settings/:key — single key lookup
 router.get('/:key', async (req, res) => {
     try {

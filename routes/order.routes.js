@@ -166,12 +166,17 @@ router.get('/shipping-options', async (req, res) => {
 // GET /api/orders/payment-methods
 router.get('/payment-methods', async (req, res) => {
     try {
-        let settings = await Settings.findOne();
-        const methods = settings?.paymentMethods?.length ? settings.paymentMethods : ['Cash on Delivery', 'M-Pesa', 'Card Payment', 'PayPal', 'Stripe'];
-        const mapped = methods.map(m => {
-            const mKey = m.toLowerCase().replace(/\s+/g, '-');
-            return { id: mKey, label: m };
-        });
+        const settings = await Settings.findOne();
+        const cfg = (settings && settings.storefrontPaymentMethods && typeof settings.storefrontPaymentMethods === 'object') ? settings.storefrontPaymentMethods : {};
+        const ALL = [
+            { id: 'cash', label: 'Cash on Delivery' },
+            { id: 'whatsapp', label: 'WhatsApp Ordering' },
+            { id: 'mpesa', label: 'M-Pesa' },
+            { id: 'card', label: 'Card Payment' },
+            { id: 'bank', label: 'Bank Transfer' }
+        ];
+        const isEnabled = (v) => (v === 'cash' || v === 'whatsapp') ? cfg[v] !== false : cfg[v] === true;
+        const mapped = ALL.filter(m => isEnabled(m.id));
         res.json({ success: true, data: mapped });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });

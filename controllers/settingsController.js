@@ -65,7 +65,7 @@ async function getLocalizationSettings(req, res) {
             currencies: ['KES', 'USD', 'EUR'],
             exchangeRates: { KES: 1, USD: 130, EUR: 145 },
             countries: ['Kenya', 'Tanzania', 'Uganda', 'USA', 'UK'],
-            countiesKenya: ['Nairobi', 'Mombasa', 'Kisumu', 'Eldoret', 'Nakuru', 'Malindi', 'Meru'];
+            countiesKenya: ['Nairobi', 'Mombasa', 'Kisumu', 'Eldoret', 'Nakuru', 'Malindi', 'Meru'],
             timezones: ['Africa/Nairobi', 'UTC', 'America/New_York', 'Europe/London']
         };
         res.json({ success: true, data: localization });
@@ -107,7 +107,6 @@ async function getPaymentSettings(req, res) {
                 paypal: { enabled: false, clientId: '', secret: '' },
                 visa: { enabled: true },
                 mastercard: { enabled: true },
-                mpesa: { enabled: true },
                 bankTransfer: { enabled: true },
                 cod: { enabled: true }
             },
