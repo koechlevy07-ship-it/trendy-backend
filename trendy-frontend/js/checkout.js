@@ -2,28 +2,12 @@
 // PROFESSIONAL CHECKOUT — Trendy Wardrobe
 // ============================================================
 
-const API_URL = 'https://trendy-backend-jq27.onrender.com/api';
-
 // ---- Helpers ----
 function escHtml(str) {
     if (str == null) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function $(id) { return document.getElementById(id); }
-
-function getImageUrl(path, width) {
-    if (!path) return '';
-    let url = path.startsWith('http') ? path : path;
-    if (url.includes('res.cloudinary.com') && !url.includes('/upload/')) return url;
-    if (url.includes('res.cloudinary.com')) {
-        const parts = url.split('/upload/');
-        if (parts.length === 2) {
-            const w = width || 200;
-            url = parts[0] + '/upload/f_webp,q_auto,w_' + w + '/' + parts[1];
-        }
-    }
-    return url;
-}
 
 // ---- Auth ----
 function getToken() { return localStorage.getItem('token'); }
@@ -536,17 +520,16 @@ async function loadPaymentMethods() {
         if (methods.length === 0) throw new Error('No methods');
 
         const iconMap = {
-            'cash-on-delivery': { icon: 'fas fa-money-bill-wave', desc: 'Pay when you receive your order' },
-            'm-pesa': { icon: 'fas fa-mobile-alt', desc: 'Pay via M-Pesa mobile money' },
-            'card-payment': { icon: 'fas fa-credit-card', desc: 'Visa, Mastercard, or Maestro' },
-            'paypal': { icon: 'fab fa-cc-paypal', desc: 'Pay with your PayPal account' },
-            'stripe': { icon: 'fab fa-cc-stripe', desc: 'Secure card payment via Stripe' },
-            'bank-transfer': { icon: 'fas fa-university', desc: 'Direct bank transfer' }
+            'cash': { icon: 'fas fa-money-bill-wave', desc: 'Pay when you receive your order' },
+            'whatsapp': { icon: 'fab fa-whatsapp', desc: 'Order via WhatsApp and confirm details with us' },
+            'mpesa': { icon: 'fas fa-mobile-alt', desc: 'Pay via M-Pesa mobile money' },
+            'card': { icon: 'fas fa-credit-card', desc: 'Visa, Mastercard, or Maestro' },
+            'bank': { icon: 'fas fa-university', desc: 'Direct bank transfer' }
         };
 
         container.innerHTML = methods.map((method, idx) => {
             const info = iconMap[method.id] || { icon: 'fas fa-credit-card', desc: 'Pay securely' };
-            const isDefault = method.id === 'cash-on-delivery' || method.id === 'm-pesa';
+            const isDefault = method.id === 'cash' || method.id === 'whatsapp';
             return `
                 <label class="payment-method ${idx === 0 ? 'selected' : ''}">
                     <input type="radio" name="payment" value="${method.id}" ${idx === 0 ? 'checked' : ''} />
@@ -575,10 +558,8 @@ async function loadPaymentMethods() {
     } catch(e) {
         // Fallback hardcoded
         const fallback = [
-            { id: 'cash-on-delivery', label: 'Cash on Delivery', icon: 'fas fa-money-bill-wave', desc: 'Pay when you receive' },
-            { id: 'm-pesa', label: 'M-Pesa', icon: 'fas fa-mobile-alt', desc: 'Pay via M-Pesa' },
-            { id: 'card-payment', label: 'Card Payment', icon: 'fas fa-credit-card', desc: 'Visa, Mastercard' },
-            { id: 'paypal', label: 'PayPal', icon: 'fab fa-cc-paypal', desc: 'PayPal account' }
+            { id: 'cash', label: 'Cash on Delivery', icon: 'fas fa-money-bill-wave', desc: 'Pay when you receive' },
+            { id: 'whatsapp', label: 'WhatsApp Ordering', icon: 'fab fa-whatsapp', desc: 'Order via WhatsApp' }
         ];
         container.innerHTML = fallback.map((m, idx) => `
             <label class="payment-method ${idx === 0 ? 'selected' : ''}">
@@ -589,7 +570,7 @@ async function loadPaymentMethods() {
                     <div class="payment-method-desc">${m.desc}</div>
                 </div>
             </label>`).join('');
-        selectPaymentMethod('cash-on-delivery', 'Cash on Delivery');
+        selectPaymentMethod('cash', 'Cash on Delivery');
         container.querySelectorAll('input[name="payment"]').forEach(radio => {
             radio.addEventListener('change', function() {
                 container.querySelectorAll('.payment-method').forEach(o => o.classList.remove('selected'));
@@ -602,6 +583,8 @@ async function loadPaymentMethods() {
 
 function selectPaymentMethod(id, label) {
     selectedPayment = { id, label };
+    const mpesaSection = $('mpesaPhoneSection');
+    if (mpesaSection) mpesaSection.style.display = id === 'mpesa' ? 'block' : 'none';
 }
 
 // Coupon
@@ -859,17 +842,54 @@ $('placeOrderBtn')?.addEventListener('click', async function() {
     if (this.disabled) return;
     if (!isLoggedIn()) { showToast('Please sign in', 'error'); return; }
 
-    // Double-check stock before placing
+    const isMpesa = selectedPayment?.id === 'mpesa';
+
+    // WhatsApp Ordering: open WhatsApp chat instead of submitting to the API.
+    if (selectedPayment?.id === 'whatsapp') {
+        const subtotal = checkoutData?.subtotal || 0;
+        const deliveryFee = selectedDelivery?.fee || 0;
+        const discount = appliedCoupon?.discount || 0;
+        const giftCardAmount = appliedGiftCard?.applyAmount || 0;
+        const loyaltyAmount = appliedLoyalty?.amount || 0;
+        const total = Math.max(0, subtotal + deliveryFee - discount - giftCardAmount - loyaltyAmount);
+        const street = $('shipStreet')?.value?.trim() || '';
+        const apartment = $('shipApartment')?.value?.trim() || '';
+        const city = $('shipCity')?.value?.trim() || '';
+        const county = $('shipCounty')?.value || '';
+        let msg = 'Hello Trendy Wardrobe,\n\nI would like to place an order.\n\nOrder details:\n\n';
+        (cartItems || []).forEach(function(item) {
+            msg += 'Product: ' + (item.name || '') + '\n';
+            msg += 'Quantity: ' + (item.quantity || 1) + '\n';
+            if (item.size) msg += 'Size: ' + item.size + '\n';
+            if (item.color) msg += 'Color: ' + item.color + '\n';
+            msg += 'Price: Ksh ' + ((item.price || 0)).toLocaleString() + '\n\n';
+        });
+        msg += 'Subtotal: ' + (subtotal ? 'Ksh ' + subtotal.toLocaleString() : 'Ksh 0') + '\n';
+        const addrParts = [street, apartment].filter(Boolean).join(', ');
+        if (addrParts) msg += 'Delivery Address: ' + addrParts + '\n';
+        if (city) msg += 'City: ' + city + (county ? ', ' + county : '') + '\n';
+        msg += 'Total: ' + (total ? 'Ksh ' + total.toLocaleString() : 'Ksh 0') + '\n\n';
+        msg += 'Please confirm availability and share the available payment methods.\n\nThank you.';
+        window.open('https://wa.me/254728985417?text=' + encodeURIComponent(msg), '_blank');
+        return;
+    }
+
+    if (isMpesa) {
+        const phone = $('mpesaPhoneInput')?.value?.trim() || $('shipPhone')?.value?.trim() || '';
+        if (!phone || phone.replace(/\D/g,'').length < 9) {
+            showToast('Please enter a valid M-Pesa phone number', 'error');
+            return;
+        }
+    }
+
     this.disabled = true;
     this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Placing Order...';
 
     try {
-        // Validate stock via API
         const stockRes = await authFetch(`${API_URL}/cart/validate-stock`, { method: 'POST' });
         const stockJson = await stockRes.json();
         const validation = stockJson.data;
         if (validation && !validation.valid && validation.issues?.length > 0) {
-            const msgs = validation.issues.map(i => `${i.name}: ${i.issue}`).join('\n');
             showToast('Stock issues found. Please review your cart.', 'error');
             this.disabled = false;
             this.innerHTML = 'Place Order <i class="fas fa-lock"></i>';
@@ -915,7 +935,7 @@ $('placeOrderBtn')?.addEventListener('click', async function() {
                 estimatedDays: selectedDelivery?.estimatedDays || '3-7 business days',
                 provider: selectedDelivery?.provider || ''
             },
-            paymentMethod: selectedPayment?.id || 'cash-on-delivery',
+            paymentMethod: selectedPayment?.id || 'cash',
             couponCode: appliedCoupon?.code || undefined,
             couponDiscount: discount || undefined,
             giftCardCode: appliedGiftCard?.code || undefined,
@@ -937,14 +957,36 @@ $('placeOrderBtn')?.addEventListener('click', async function() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Order failed');
 
-        // Clear local cart
+        const orderObj = data.data || data.order || data;
+        const orderId = orderObj._id || orderObj.id;
+        const orderNumber = orderObj.orderNumber;
+
         setLocalCart([]);
         localStorage.removeItem('cart');
 
-        // Redirect to confirmation page
-        const orderId = data.data?._id || data.order?._id;
-        const orderNumber = data.data?.orderNumber || data.order?.orderNumber;
-        window.location.href = `/order-confirmation.html?id=${orderId}&number=${orderNumber}`;
+        if (isMpesa) {
+            const phone = $('mpesaPhoneInput')?.value?.trim() || $('shipPhone')?.value?.trim() || '';
+            showMpesaModal();
+            try {
+                const payRes = await authFetch(`${API_URL}/orders/${orderId}/pay-mpesa`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phoneNumber: phone })
+                });
+                const payData = await payRes.json();
+                if (!payRes.ok) throw new Error(payData.message || 'M-Pesa payment failed');
+                updateMpesaModal('pending', 'Check your phone for the M-Pesa prompt. Enter your PIN to complete payment.');
+                pollMpesaPayment(orderId, orderNumber, 0);
+            } catch (mpesaErr) {
+                updateMpesaModal('failed', mpesaErr.message || 'M-Pesa payment initiation failed');
+                $('mpesaModalCloseBtn')?.addEventListener('click', () => {
+                    hideMpesaModal();
+                    window.location.href = `/order-confirmation.html?id=${orderId}&number=${orderNumber || ''}`;
+                }, { once: true });
+            }
+        } else {
+            window.location.href = `/order-confirmation.html?id=${orderId}&number=${orderNumber || ''}`;
+        }
 
     } catch (err) {
         showToast(err.message || 'Failed to place order', 'error');
@@ -952,6 +994,96 @@ $('placeOrderBtn')?.addEventListener('click', async function() {
         this.innerHTML = 'Place Order <i class="fas fa-lock"></i>';
     }
 });
+
+function showMpesaModal() {
+    let modal = $('mpesaPaymentModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'mpesaPaymentModal';
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content mpesa-modal">
+                <div class="mpesa-modal-icon" id="mpesaModalIcon"><i class="fas fa-mobile-alt"></i></div>
+                <h3 id="mpesaModalTitle">M-Pesa Payment</h3>
+                <p id="mpesaModalMsg">Waiting for M-Pesa confirmation...</p>
+                <div class="mpesa-modal-spinner" id="mpesaModalSpinner"><div class="spinner"></div></div>
+                <button id="mpesaModalCloseBtn" style="display:none" class="btn btn-primary" onclick="this.closest('.modal-overlay').style.display='none'">Done</button>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'flex'; });
+    }
+    modal.style.display = 'flex';
+    updateMpesaModal('pending', 'Sending M-Pesa prompt to your phone...');
+}
+
+function updateMpesaModal(status, msg) {
+    const icon = $('mpesaModalIcon');
+    const title = $('mpesaModalTitle');
+    const msgEl = $('mpesaModalMsg');
+    const spinner = $('mpesaModalSpinner');
+    const closeBtn = $('mpesaModalCloseBtn');
+    if (msgEl) msgEl.textContent = msg;
+    if (status === 'pending') {
+        if (icon) icon.innerHTML = '<i class="fas fa-mobile-alt"></i>';
+        if (icon) icon.style.color = 'var(--accent, #C9A24D)';
+        if (title) title.textContent = 'M-Pesa Payment';
+        if (spinner) spinner.style.display = 'block';
+        if (closeBtn) closeBtn.style.display = 'none';
+    } else if (status === 'completed') {
+        if (icon) icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+        if (icon) icon.style.color = '#2ecc71';
+        if (title) title.textContent = 'Payment Successful!';
+        if (spinner) spinner.style.display = 'none';
+        if (closeBtn) { closeBtn.style.display = 'inline-block'; closeBtn.textContent = 'View Order'; }
+    } else {
+        if (icon) icon.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
+        if (icon) icon.style.color = '#e74c3c';
+        if (title) title.textContent = 'Payment Issue';
+        if (spinner) spinner.style.display = 'none';
+        if (closeBtn) { closeBtn.style.display = 'inline-block'; closeBtn.textContent = 'Continue'; }
+    }
+}
+
+function hideMpesaModal() {
+    const modal = $('mpesaPaymentModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function pollMpesaPayment(orderId, orderNumber, attempts) {
+    if (attempts >= 30) {
+        updateMpesaModal('failed', 'Payment verification timed out. Your order was placed — check your account for updates.');
+        $('mpesaModalCloseBtn')?.addEventListener('click', () => {
+            hideMpesaModal();
+            window.location.href = `/order-confirmation.html?id=${orderId}&number=${orderNumber || ''}`;
+        }, { once: true });
+        return;
+    }
+
+    try {
+        const res = await authFetch(`${API_URL}/orders/${orderId}/verify-payment`, { method: 'POST' });
+        const data = await res.json();
+        const status = data.data?.status;
+
+        if (status === 'completed') {
+            updateMpesaModal('completed', 'Payment confirmed! Redirecting to your order...');
+            setTimeout(() => {
+                window.location.href = `/order-confirmation.html?id=${orderId}&number=${orderNumber || ''}`;
+            }, 1500);
+            return;
+        } else if (status === 'failed') {
+            updateMpesaModal('failed', 'Payment was not completed. Your order is placed but awaiting payment.');
+            $('mpesaModalCloseBtn')?.addEventListener('click', () => {
+                hideMpesaModal();
+                window.location.href = `/order-confirmation.html?id=${orderId}&number=${orderNumber || ''}`;
+            }, { once: true });
+            return;
+        }
+
+        setTimeout(() => pollMpesaPayment(orderId, orderNumber, attempts + 1), 3000);
+    } catch (e) {
+        setTimeout(() => pollMpesaPayment(orderId, orderNumber, attempts + 1), 5000);
+    }
+}
 
 // ============================================================
 // HEADER & NAV
@@ -1057,6 +1189,10 @@ async function loadSocialLinks() {
         const drawerEl = $('drawerSocialLinks');
         if (footerEl) footerEl.innerHTML = html;
         if (drawerEl) drawerEl.innerHTML = html;
+        if (links.whatsapp && links.whatsapp.enabled && links.whatsapp.url) {
+            const floater = document.getElementById('floatingWhatsApp');
+            if (floater) { floater.href = links.whatsapp.url; floater.classList.remove('hidden-wa'); }
+        }
     } catch(e) {}
 }
 
@@ -1165,4 +1301,24 @@ document.addEventListener('DOMContentLoaded', () => {
     loadSocialLinks();
     updateUI();
     initCheckout();
+    initMobileBottomNav();
+    initVirtualKeyboardHandler();
 });
+
+function initMobileBottomNav() {
+    var mql = window.matchMedia('(max-width: 768px)');
+    var nav = document.getElementById('mobileBottomNav');
+    function applyMobileNav(e) { if (nav) nav.style.display = e.matches ? 'flex' : 'none'; }
+    mql.addEventListener('change', applyMobileNav);
+    applyMobileNav(mql);
+}
+
+function initVirtualKeyboardHandler() {
+    if (!window.visualViewport) return;
+    var fixedEls = [document.getElementById('mobileBottomNav'), document.querySelector('.floating-whatsapp'), document.getElementById('backToTop')].filter(Boolean);
+    window.visualViewport.addEventListener('resize', function() {
+        var isKeyboard = window.visualViewport.height < window.innerHeight * 0.75;
+        fixedEls.forEach(function(el) { el.style.transform = isKeyboard ? 'translateY(100vh)' : ''; el.style.transition = 'transform 0.2s ease'; });
+    });
+    window.visualViewport.addEventListener('focusout', function() { fixedEls.forEach(function(el) { el.style.transform = ''; }); });
+}

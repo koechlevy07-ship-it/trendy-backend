@@ -10,7 +10,7 @@
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
     <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://cdn.vercel-insights.com https://vercel.live https://maps.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://res.cloudinary.com https://placehold.co blob: https://cdn-icons-png.flaticon.com https://maps.googleapis.com https://maps.gstatic.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com; connect-src 'self' https://trendy-backend-jq27.onrender.com https://api.cloudinary.com https://cdn.vercel-insights.com https://vercel.live https://maps.googleapis.com https://www.google-analytics.com https://www.google.com; frame-src https://www.google.com https://www.google.com/maps https://vercel.live; worker-src 'self';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://cdn.vercel-insights.com https://vercel.live https://maps.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://res.cloudinary.com https://placehold.co blob: https://cdn-icons-png.flaticon.com https://maps.googleapis.com https://maps.gstatic.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com; connect-src 'self' https://trendy-backend-jq27.onrender.com https://api.cloudinary.com https://cdn.vercel-insights.com https://vercel.live https://cdn.jsdelivr.net https://maps.googleapis.com https://www.google-analytics.com https://www.google.com; frame-src https://www.google.com https://www.google.com/maps https://vercel.live; worker-src 'self';" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZYYHCQ4HZX"></script>
@@ -119,7 +119,8 @@
         .dash-card .card-top .card-change { font-size:0.7rem; font-weight:600; padding:2px 10px; border-radius:20px; background:#DCFCE7; color:#166534; }
         .dash-card .card-number { font-family:'Poppins',sans-serif; font-weight:800; font-size:1.8rem; color:var(--text-primary); margin-bottom:2px; }
         .dash-card .card-label { font-size:0.85rem; color:var(--text-secondary); font-weight:500; }
-        .chart-section { background:var(--bg-secondary); border-radius:var(--radius); border:1px solid var(--border-light); padding:24px; margin-bottom:28px; box-shadow:var(--shadow); }
+        .chart-section { background:var(--bg-secondary); border-radius:var(--radius); border:1px solid var(--border-light); padding:24px; margin-bottom:28px; box-shadow:var(--shadow); min-width:0; }
+        .chart-section canvas { max-width:100%; }
         .chart-section .chart-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
         .chart-section .chart-header h3 { font-family:'Poppins',sans-serif; font-weight:600; font-size:1.1rem; }
         .chart-section .chart-header .chart-filters { display:flex; gap:8px; }
@@ -291,7 +292,7 @@
         .dashboard-cards.show-all #toggleKpiBtn i { transform:rotate(180deg); }
         @media(max-width:1400px) { .dashboard-cards { grid-template-columns:repeat(4,1fr); } }
         @media(max-width:1200px) { .dashboard-cards { grid-template-columns:repeat(3,1fr); } }
-        @media(max-width:992px) { .sidebar { transform:translateX(-100%); } .sidebar.open { transform:translateX(0); } .main-content { margin-left:0; } .top-header .header-left .hamburger { display:block; } .form-grid { grid-template-columns:1fr; } .sidebar-overlay.show { display:block; } .slide-card { flex-direction:column; } .slide-card .slide-preview { width:100%; height:160px; } #panel-dashboard > div:last-child { grid-template-columns:1fr !important; } .dashboard-cards { grid-template-columns:repeat(2,1fr); } #recentCustomersGrid { grid-template-columns:repeat(2,1fr) !important; } .page-content { overflow-x:auto; } table { min-width:600px; } .page-content table { display:block; overflow-x:auto; -webkit-overflow-scrolling:touch; } }
+        @media(max-width:992px) { .sidebar { transform:translateX(-100%); } .sidebar.open { transform:translateX(0); } .main-content { margin-left:0; } .top-header .header-left .hamburger { display:block; } .form-grid { grid-template-columns:1fr; } .sidebar-overlay.show { display:block; } .slide-card { flex-direction:column; } .slide-card .slide-preview { width:100%; height:160px; } #panel-dashboard > div:last-child { grid-template-columns:1fr !important; } #panel-dashboard > div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns:1fr !important; } .dashboard-cards { grid-template-columns:repeat(2,1fr); } #recentCustomersGrid { grid-template-columns:repeat(2,1fr) !important; } .page-content { overflow-x:auto; } table { min-width:600px; } .page-content table { display:block; overflow-x:auto; -webkit-overflow-scrolling:touch; } }
         @media(max-width:768px) { .top-header { padding:12px 16px; flex-wrap:wrap; height:auto; gap:12px; } .top-header .header-right { flex-wrap:wrap; gap:12px; width:100%; } .top-header .header-right .search-box { flex:1; min-width:120px; } .admin-phone { display:none; } .top-header .header-right .admin-profile .admin-info { display:none; } .page-content { padding:16px; } .dashboard-cards { grid-template-columns:repeat(2,1fr); } #recentCustomersGrid { grid-template-columns:1fr !important; } .sidebar { width:280px; } .notification-dropdown { width:320px; right:-20px; } .social-link-row { flex-direction:column; align-items:flex-start; } .social-link-row .platform-name { width:auto; } .social-link-row input[type="text"] { min-width:0; width:100%; } #kpiCards .dash-card { padding:14px 16px; } .page-content .form-grid { grid-template-columns:1fr !important; } .page-content .settings-grid { grid-template-columns:1fr !important; } .page-content .promo-grid { grid-template-columns:repeat(2,1fr) !important; } .report-table th, .report-table td { padding:8px; font-size:0.75rem; } .catalogue-card { padding:16px; } .catalogue-card .cat-img-preview { height:140px; } .slide-card .slide-preview { height:120px; } .fc-form-grid { grid-template-columns:1fr !important; } }
         @media(max-width:480px) { .top-header .header-right .search-box { display:none; } .dash-card .card-number { font-size:1.2rem; } .filter-tabs { gap:4px; } .filter-tabs button { padding:6px 12px; font-size:0.7rem; } .dashboard-cards { grid-template-columns:1fr 1fr; gap:10px; } #toggleKpiBtn { grid-column:1/-1; } .page-content .promo-grid { grid-template-columns:1fr !important; } .page-content .catalogue-grid { grid-template-columns:1fr !important; } .page-content .media-grid { grid-template-columns:repeat(2,1fr) !important; gap:10px; } .media-card .media-img-wrap { height:100px; } .page-content .report-card { padding:12px; overflow-x:auto; } .slide-card .slide-info { padding:12px; } .slide-card .slide-info h4 { font-size:0.85rem; } .login-box { padding:32px 20px; } .login-box .login-logo { font-size:1.6rem; } .notification-dropdown { width:calc(100vw - 32px); right:-16px; } }
 
@@ -1212,8 +1213,8 @@
             </div>
             <!-- SELLERS -->
             <div class="tab-panel" id="panel-sellers">
-                <div class="section-header"><h2>Sellers</h2></div>
-                <div class="table-section"><p style="color:var(--text-muted);text-align:center;padding:40px;">Seller management module — coming soon.</p></div>
+                <div class="section-header"><h2>Sellers</h2><button class="btn-add" onclick="exportSellersCSV()" id="exportSellersBtn" style="display:none;"><i class="fas fa-download"></i> Export CSV</button></div>
+                <div class="table-section"><div class="table-wrapper"><table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Joined</th></tr></thead><tbody id="sellersTableBody"><tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No seller accounts found.</td></tr></tbody></table></div></div>
             </div>
             <!-- BRANDING -->
             <div class="tab-panel" id="panel-logo-favicon">
@@ -1543,6 +1544,27 @@
 
                 <!-- PAYMENTS TAB -->
                 <div class="system-tab-panel" id="sysTab-payments">
+                    <div class="detail-section" style="margin-bottom:24px;">
+                        <h4>Storefront Payment Methods</h4>
+                        <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 12px;">Only the methods enabled here are shown on the customer storefront checkout. M-Pesa, Card, and Bank Transfer are hidden by default — enable them anytime to display them to customers again.</p>
+                        <div class="form-grid">
+                            <div class="detail-section" style="margin:0;padding:16px;background:var(--bg-primary);border-radius:var(--radius-sm);">
+                                <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="payStoreCash" checked /> <strong>Cash on Delivery</strong></label>
+                            </div>
+                            <div class="detail-section" style="margin:0;padding:16px;background:var(--bg-primary);border-radius:var(--radius-sm);">
+                                <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="payStoreWhatsapp" checked /> <strong>WhatsApp Ordering</strong></label>
+                            </div>
+                            <div class="detail-section" style="margin:0;padding:16px;background:var(--bg-primary);border-radius:var(--radius-sm);">
+                                <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="payStoreMpesa" /> <strong>M-Pesa</strong></label>
+                            </div>
+                            <div class="detail-section" style="margin:0;padding:16px;background:var(--bg-primary);border-radius:var(--radius-sm);">
+                                <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="payStoreCard" /> <strong>Card Payment</strong></label>
+                            </div>
+                            <div class="detail-section" style="margin:0;padding:16px;background:var(--bg-primary);border-radius:var(--radius-sm);">
+                                <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="payStoreBank" /> <strong>Bank Transfer</strong></label>
+                            </div>
+                        </div>
+                    </div>
                     <div class="detail-section">
                         <h4>Payment Methods Configuration</h4>
                         <div class="form-grid">
@@ -2708,6 +2730,24 @@ Sitemap: https://trendywardrobe.com/sitemap.xml</textarea>
         </div>
         <div class="table-section"><div class="table-wrapper"><table><thead><tr><th>Name</th><th>Location</th><th>Title</th><th>Priority</th><th>Status</th><th>Views</th><th>Clicks</th><th>Created</th><th>Actions</th></tr></thead><tbody id="bannersTableBody"><tr><td colspan="9" style="text-align:center;color:var(--text-muted);">Loading...</td></tr></tbody></table></div></div>
     </div>
+    <!-- ====================== SEARCH & DISCOVERY ====================== -->
+    <div class="tab-panel" id="panel-search">
+        <div class="section-header"><h2><i class="fas fa-search" style="color:var(--gold);margin-right:8px;"></i> Search & Discovery</h2><button class="btn-add" onclick="exportSearchCSV()"><i class="fas fa-download"></i> Export CSV</button></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px;">
+            <div class="dash-card" style="text-align:center;padding:20px;"><div style="font-size:2rem;font-weight:700;color:var(--gold);" id="srTotalSearches">0</div><div style="font-size:0.8rem;color:var(--text-secondary);">Total Searches</div></div>
+            <div class="dash-card" style="text-align:center;padding:20px;"><div style="font-size:2rem;font-weight:700;color:var(--gold);" id="srZeroResultsRate">0%</div><div style="font-size:0.8rem;color:var(--text-secondary);">Zero-Results Rate</div></div>
+            <div class="dash-card" style="text-align:center;padding:20px;"><div style="font-size:2rem;font-weight:700;color:var(--gold);" id="srConversionRate">0%</div><div style="font-size:0.8rem;color:var(--text-secondary);">Conversion Rate</div></div>
+            <div class="dash-card" style="text-align:center;padding:20px;"><div style="font-size:1.2rem;font-weight:700;color:var(--gold);" id="srAvgResponseTime">0ms</div><div style="font-size:0.8rem;color:var(--text-secondary);">Avg Response Time</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+            <div class="dash-card"><h3 style="font-size:0.95rem;font-weight:600;margin-bottom:12px;">Top Queries</h3><div id="srTopQueries" style="font-size:0.85rem;color:var(--text-secondary);">Loading...</div></div>
+            <div class="dash-card"><h3 style="font-size:0.95rem;font-weight:600;margin-bottom:12px;">Zero-Result Queries</h3><div id="srZeroQueries" style="font-size:0.85rem;color:var(--text-secondary);">Loading...</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+            <div class="dash-card"><h3 style="font-size:0.95rem;font-weight:600;margin-bottom:12px;">Top Categories</h3><div id="srTopCategories" style="font-size:0.85rem;color:var(--text-secondary);">Loading...</div></div>
+            <div class="dash-card"><h3 style="font-size:0.95rem;font-weight:600;margin-bottom:12px;">Trending Searches</h3><div id="srTrending" style="font-size:0.85rem;color:var(--text-secondary);">Loading...</div></div>
+        </div>
+    </div>
     <!-- ====================== RBAC / ADMIN USERS & ROLES ====================== -->
     <div class="tab-panel" id="panel-rbac">
         <div class="settings-tabs" style="margin-bottom:20px;">
@@ -3326,7 +3366,7 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
             const panel = document.getElementById(`panel-${section}`); if (panel) panel.classList.add('active');
             pageTitle.textContent = pageTitles[section] || 'Dashboard';
             if (window.innerWidth <= 992) { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('show'); }
-            const loaders = { dashboard:loadDashboardData, products:loadProducts, categories:loadCategories, orders:()=>{ loadOrderStats(); loadOrders(); }, customers:loadCustomers, contacts:loadContacts, reviews:loadReviews, testimonials:loadTestimonials, inventory:()=>{ loadInventoryStats(); loadInventory(); }, payments:()=>{}, 'wishlist-analytics':loadWishlistAnalytics, coupons:()=>{ loadCouponStats(); loadCoupons(); }, 'hero-banners':loadHeroSlides, catalogues:loadCatalogues, 'featured-collections':loadFeaturedCollections, 'social-links':loadSocialLinks, settings:loadSystemSettings, sellers:()=>{}, 'logo-favicon':loadBrandingData, 'media-library':loadMediaLibrary, reports:loadAnalyticsDashboard, loyalty:loadLoyaltyData, marketing:loadMarketingData, search:loadSearchData, promotions:loadPromotions, 'flash-sales':loadFlashSales, newsletter:loadNewsletter, 'featured-products':loadFeaturedProducts, 'homepage-cms':loadHomepageCMS, 'website-content':loadWebsiteContent, seo:loadSEO, popups:loadPopups, 'gift-cards':loadGiftCards, 'promo-banners':loadPromoBanners, rbac:loadRBAC };
+            const loaders = { dashboard:loadDashboardData, products:loadProducts, categories:loadCategories, orders:()=>{ loadOrderStats(); loadOrders(); }, customers:loadCustomers, contacts:loadContacts, reviews:loadReviews, testimonials:loadTestimonials, inventory:()=>{ loadInventoryStats(); loadInventory(); }, payments:loadPayments, 'wishlist-analytics':loadWishlistAnalytics, coupons:()=>{ loadCouponStats(); loadCoupons(); }, 'hero-banners':loadHeroSlides, catalogues:loadCatalogues, 'featured-collections':loadFeaturedCollections, 'social-links':loadSocialLinks, settings:loadSystemSettings, sellers:loadSellers, 'logo-favicon':loadBrandingData, 'media-library':loadMediaLibrary, reports:loadAnalyticsDashboard, loyalty:loadLoyaltyData, marketing:loadMarketingData, search:loadSearchData, promotions:loadPromotions, 'flash-sales':loadFlashSales, newsletter:loadNewsletter, 'featured-products':loadFeaturedProducts, 'homepage-cms':loadHomepageCMS, 'website-content':loadWebsiteContent, seo:loadSEO, popups:loadPopups, 'gift-cards':loadGiftCards, 'promo-banners':loadPromoBanners, rbac:loadRBAC };
             if (loaders[section]) loaders[section]();
         }
 
@@ -3377,6 +3417,12 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
 
                 /* Payments tab */
                 const pm = set.paymentMethods || {};
+                const sm = (set.storefrontPaymentMethods && typeof set.storefrontPaymentMethods === 'object') ? set.storefrontPaymentMethods : {};
+                cb('payStoreCash', sm.cash !== false);
+                cb('payStoreWhatsapp', sm.whatsapp !== false);
+                cb('payStoreMpesa', !!sm.mpesa);
+                cb('payStoreCard', !!sm.card);
+                cb('payStoreBank', !!sm.bank);
                 cb('payMpesaEnabled',pm.mpesa?.enabled);
                 cb('payStripeEnabled',pm.stripe?.enabled);
                 fv('payStripePublishableKey',pm.stripe?.publishableKey||'');
@@ -3534,15 +3580,22 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
                     announcementBarEnabled: gc('announcementEnabled'),
                     announcementBarText: gv('announcementText'),
                     cookieNoticeEnabled: gc('cookieNoticeEnabled'),
-                    paymentMethods: {
-                        mpesa: { enabled: gc('payMpesaEnabled') },
-                        stripe: { enabled: gc('payStripeEnabled'), publishableKey: gv('payStripePublishableKey'), secretKey: gv('payStripeSecretKey') },
-                        paypal: { enabled: gc('payPaypalEnabled'), clientId: gv('payPaypalClientId'), secret: gv('payPaypalSecret') },
-                        visa: { enabled: gc('payVisaEnabled') },
-                        mastercard: { enabled: gc('payMastercardEnabled') },
-                        bankTransfer: { enabled: gc('payBankTransferEnabled'), bankName: gv('payBankName'), accountNumber: gv('payBankAccountNumber'), accountName: gv('payBankAccountName') },
-                        cod: { enabled: gc('payCodEnabled') }
-                    }
+paymentMethods: {
+mpesa: { enabled: gc('payMpesaEnabled') },
+stripe: { enabled: gc('payStripeEnabled'), publishableKey: gv('payStripePublishableKey'), secretKey: gv('payStripeSecretKey') },
+paypal: { enabled: gc('payPaypalEnabled'), clientId: gv('payPaypalClientId'), secret: gv('payPaypalSecret') },
+visa: { enabled: gc('payVisaEnabled') },
+mastercard: { enabled: gc('payMastercardEnabled') },
+bankTransfer: { enabled: gc('payBankTransferEnabled'), bankName: gv('payBankName'), accountNumber: gv('payBankAccountNumber'), accountName: gv('payBankAccountName') },
+cod: { enabled: gc('payCodEnabled') }
+},
+storefrontPaymentMethods: {
+cash: gc('payStoreCash'),
+whatsapp: gc('payStoreWhatsapp'),
+mpesa: gc('payStoreMpesa'),
+card: gc('payStoreCard'),
+bank: gc('payStoreBank')
+}
                 };
                 const securityPayload = {
                     passwordMinLength: parseInt(gv('secPasswordMinLength'))||8,
@@ -4113,6 +4166,775 @@ const pageTitles = { dashboard:'Dashboard', products:'Products', categories:'Cat
             if (notificationInterval) clearInterval(notificationInterval);
             notificationInterval = setInterval(fetchNotifications, 60000);
         }
+
+        /* CUSTOMER MANAGEMENT */
+        let customersData = [], customersPage = 1, customersTotalPages = 1, customersTotalItems = 0, customersSelected = new Set();
+        let customerSearchTimer = null;
+
+        async function loadCustomerStats() {
+            try {
+                const res = await safeFetch(`${API_URL}/users/admin/statistics`, { headers: getHeaders() });
+                if (!res.ok) return;
+                const d = await res.json();
+                if (!d.success || !d.data) return;
+                const s = d.data;
+                const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v ?? 0; };
+                set('custTotal', s.totalCustomers); set('custNewToday', s.newToday); set('custActive', s.active);
+                set('custSuspended', s.suspended); set('custBlocked', s.blocked); set('custPending', s.pendingVerification);
+                set('custVerified', s.verified);
+                const rev = document.getElementById('custRevenue'); if (rev) rev.textContent = 'Ksh ' + (s.totalRevenue || 0).toLocaleString();
+                const alv = document.getElementById('custALV'); if (alv) alv.textContent = 'Ksh ' + (s.avgLifetimeValue || 0).toLocaleString();
+            } catch (e) { /* non-critical */ }
+        }
+
+        async function loadCustomers(pg) {
+            loadCustomerStats();
+            if (pg !== undefined) customersPage = pg;
+            const search = (document.getElementById('customerSearchInput')?.value || '').trim();
+            const status = document.getElementById('customerStatusFilter')?.value || '';
+            const sort = document.getElementById('customerSort')?.value || '';
+            const params = new URLSearchParams({ page: customersPage, limit: 20 });
+            if (search) params.set('search', search);
+            if (status) params.set('status', status);
+            if (sort) params.set('sort', sort);
+            try {
+                const res = await safeFetch(`${API_URL}/users/admin?${params}`, { headers: getHeaders() });
+                if (!res.ok) throw new Error('Failed');
+                const d = await res.json();
+                customersData = d.data || [];
+                const pag = d.pagination || {};
+                customersTotalPages = pag.pages || 1;
+                customersTotalItems = pag.total || customersData.length;
+                renderCustomersTable();
+            } catch (err) { showToast(err.message || 'Error loading customers'); }
+        }
+
+        function renderCustomersTable() {
+            const tbody = document.getElementById('customersTableBody');
+            const pagEl = document.getElementById('custPagination');
+            if (!tbody) return;
+            if (!customersData.length) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);">No customers found.</td></tr>';
+                if (pagEl) pagEl.innerHTML = '';
+                return;
+            }
+            customersSelected.clear();
+            const selAll = document.getElementById('custSelectAll'); if (selAll) selAll.checked = false;
+            tbody.innerHTML = customersData.map(c => {
+                const st = c.status || 'active';
+                const stClass = st === 'active' ? 'paid' : st === 'suspended' ? 'pending' : 'cancelled';
+                const joined = c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '-';
+                const last = c.lastLogin ? new Date(c.lastLogin).toLocaleDateString() : '-';
+                const ver = c.emailVerified ? '<span style="color:var(--success);">Yes</span>' : '<span style="color:var(--text-muted);">No</span>';
+                return `<tr>
+                    <td><input type="checkbox" class="cust-checkbox" data-id="${c._id}" onchange="custCheckboxChanged(this)"></td>
+                    <td><strong>${escHtml(c.name || 'N/A')}</strong>${c.customerId ? `<br><small style="color:var(--text-muted);font-size:0.7rem;">${escHtml(c.customerId)}</small>` : ''}</td>
+                    <td style="font-size:0.85rem;">${escHtml(c.email || '')}<br><small style="color:var(--text-muted);font-size:0.7rem;">${escHtml(c.phone || '')}</small></td>
+                    <td style="font-size:0.85rem;">${c.orderCount || 0}</td>
+                    <td><strong>Ksh ${(c.totalSpent || 0).toLocaleString()}</strong></td>
+                    <td><span class="status-badge ${stClass}">${escStatus(st)}</span><br><small style="color:var(--text-muted);font-size:0.7rem;">${ver}</small></td>
+                    <td style="font-size:0.85rem;">${last}</td>
+                    <td style="font-size:0.85rem;">${joined}</td>
+                    <td style="text-align:right;white-space:nowrap;">
+                        <select onchange="updateCustomerStatus('${c._id}', this.value)" style="padding:3px 6px;border:1px solid var(--border-light);border-radius:4px;font-size:0.72rem;background:var(--bg-primary);color:var(--text-primary);">
+                            <option value="active" ${st === 'active' ? 'selected' : ''}>Active</option>
+                            <option value="suspended" ${st === 'suspended' ? 'selected' : ''}>Suspended</option>
+                            <option value="blocked" ${st === 'blocked' ? 'selected' : ''}>Blocked</option>
+                            <option value="pending_verification" ${st === 'pending_verification' ? 'selected' : ''}>Pending Verif.</option>
+                        </select>
+                    </td>
+                </tr>`;
+            }).join('');
+            renderCustPagination();
+        }
+
+        function renderCustPagination() {
+            const el = document.getElementById('custPagination');
+            if (!el) return;
+            el.innerHTML = `<span>${customersTotalItems} customer(s)</span>`;
+            if (customersTotalPages <= 1) return;
+            let html = `<span>Page ${customersPage} of ${customersTotalPages}</span>`;
+            html += `<span style="display:flex;gap:6px;">`;
+            if (customersPage > 1) html += `<button class="page-btn" data-page="${customersPage - 1}" style="padding:5px 10px;border:1px solid var(--border-light);border-radius:4px;cursor:pointer;font-size:0.78rem;background:var(--bg-primary);">&laquo; Prev</button>`;
+            for (let i = Math.max(1, customersPage - 2); i <= Math.min(customersTotalPages, customersPage + 2); i++) {
+                html += `<button class="page-btn" data-page="${i}" style="padding:5px 10px;border:1px solid ${i === customersPage ? 'var(--gold)' : 'var(--border-light)'};border-radius:4px;cursor:pointer;font-size:0.78rem;background:${i === customersPage ? 'var(--gold)' : 'var(--bg-primary)'};color:${i === customersPage ? '#fff' : 'inherit'};">${i}</button>`;
+            }
+            if (customersPage < customersTotalPages) html += `<button class="page-btn" data-page="${customersPage + 1}" style="padding:5px 10px;border:1px solid var(--border-light);border-radius:4px;cursor:pointer;font-size:0.78rem;background:var(--bg-primary);">Next &raquo;</button>`;
+            html += `</span>`;
+            el.innerHTML += html;
+        }
+
+        function toggleSelectAllCust(el) {
+            document.querySelectorAll('.cust-checkbox').forEach(cb => { cb.checked = el.checked; custCheckboxChanged(cb); });
+        }
+        function custCheckboxChanged(cb) {
+            if (cb.checked) customersSelected.add(cb.dataset.id); else customersSelected.delete(cb.dataset.id);
+        }
+        async function updateCustomerStatus(id, status) {
+            try {
+                const res = await safeFetch(`${API_URL}/users/${id}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status }) });
+                const d = await res.json();
+                showToast(d.success ? 'Customer status updated' : (d.message || 'Update failed'));
+                if (d.success) loadCustomers();
+            } catch (e) { showToast('Error updating customer status'); }
+        }
+        async function exportCustomers() {
+            try {
+                const search = (document.getElementById('customerSearchInput')?.value || '').trim();
+                const status = document.getElementById('customerStatusFilter')?.value || '';
+                const res = await safeFetch(`${API_URL}/users/export`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ format: 'csv', search, status }) });
+                if (!res.ok) throw new Error('Export failed');
+                const blob = await res.blob();
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'customers.csv'; a.click();
+                URL.revokeObjectURL(a.href);
+            } catch (e) { showToast('Export failed'); }
+        }
+        function showBulkCustModal() {
+            const ids = [...customersSelected];
+            if (!ids.length) { showToast('Select at least one customer'); return; }
+            const action = prompt('Bulk action for ' + ids.length + ' customer(s): active, suspend, block, verify');
+            if (!action) return;
+            const val = action.trim().toLowerCase();
+            let payload = { userIds: ids, action: 'update-status', value: 'active' };
+            if (val === 'suspend') payload = { userIds: ids, action: 'suspend' };
+            else if (val === 'block') payload = { userIds: ids, action: 'block' };
+            else if (val === 'verify') payload = { userIds: ids, action: 'verify-email' };
+            else if (['active', 'suspended', 'blocked', 'pending_verification'].includes(val)) payload = { userIds: ids, action: 'update-status', value: val };
+            else { showToast('Unknown action'); return; }
+            safeFetch(`${API_URL}/users/admin/bulk`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) })
+                .then(r => r.json()).then(d => { showToast(d.message || 'Bulk update done'); if (d.success) loadCustomers(); })
+                .catch(() => showToast('Bulk update failed'));
+        }
+        document.getElementById('customerSearchInput')?.addEventListener('input', function () { clearTimeout(customerSearchTimer); customerSearchTimer = setTimeout(() => { customersPage = 1; loadCustomers(); }, 400); });
+        document.getElementById('customerStatusFilter')?.addEventListener('change', function () { customersPage = 1; loadCustomers(); });
+        document.getElementById('customerSort')?.addEventListener('change', function () { customersPage = 1; loadCustomers(); });
+        document.getElementById('custPagination')?.addEventListener('click', function (e) { const b = e.target.closest('.page-btn'); if (b) { customersPage = parseInt(b.dataset.page) || 1; loadCustomers(); } });
+
+        /* CONTACT MANAGEMENT */
+        let contactsData = [], contactsPage = 1, contactsTotalPages = 1, contactsTotalItems = 0;
+        let contactSearchTimer = null;
+
+        async function loadContactStats() {
+            try {
+                const res = await safeFetch(`${API_URL}/contact/admin/stats`, { headers: getHeaders() });
+                if (!res.ok) return;
+                const d = await res.json();
+                if (!d.success || !d.data) return;
+                const s = d.data;
+                const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v ?? 0; };
+                set('contactTotal', s.total); set('contactNew', s.new); set('contactOpen', s.open);
+                set('contactInProgress', s.in_progress); set('contactPending', s.pending);
+                set('contactResolved', s.resolved); set('contactClosed', s.closed); set('contactSpam', s.spam);
+                set('contactUrgent', s.urgent); set('contactToday', s.today); set('contactMonthly', s.monthly);
+                const ar = document.getElementById('contactAvgResponse'); if (ar) ar.textContent = s.avgResponseTime > 0 ? s.avgResponseTime + 'h' : 0;
+            } catch (e) { /* non-critical */ }
+        }
+
+        async function loadContacts(pg) {
+            loadContactStats();
+            if (pg !== undefined) contactsPage = pg;
+            const search = (document.getElementById('contactSearchInput')?.value || '').trim();
+            const status = document.getElementById('contactStatusFilter')?.value || '';
+            const priority = document.getElementById('contactPriorityFilter')?.value || '';
+            const category = document.getElementById('contactCategoryFilter')?.value || '';
+            const dateFrom = document.getElementById('contactDateFrom')?.value || '';
+            const dateTo = document.getElementById('contactDateTo')?.value || '';
+            const params = new URLSearchParams({ page: contactsPage, limit: 20 });
+            if (search) params.set('search', search);
+            if (status && status !== 'all') params.set('status', status);
+            if (priority && priority !== 'all') params.set('priority', priority);
+            if (category && category !== 'all') params.set('category', category);
+            if (dateFrom) params.set('dateFrom', dateFrom);
+            if (dateTo) params.set('dateTo', dateTo);
+            try {
+                const res = await safeFetch(`${API_URL}/contact/admin?${params}`, { headers: getHeaders() });
+                if (!res.ok) throw new Error('Failed');
+                const d = await res.json();
+                contactsData = d.data || [];
+                contactsTotalPages = d.pages || 1;
+                contactsTotalItems = d.total || contactsData.length;
+                renderContactsTable();
+            } catch (err) { showToast(err.message || 'Error loading contacts'); }
+        }
+
+        function renderContactsTable() {
+            const tbody = document.getElementById('contactsTableBody');
+            const pagEl = document.getElementById('contactPagination');
+            if (!tbody) return;
+            if (!contactsData.length) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text-muted);">No messages found.</td></tr>';
+                if (pagEl) pagEl.innerHTML = '';
+                return;
+            }
+            tbody.innerHTML = contactsData.map(c => {
+                const st = c.status || 'new';
+                const pr = c.priority || 'medium';
+                const stClass = st === 'resolved' || st === 'closed' ? 'paid' : st === 'spam' ? 'cancelled' : st === 'new' ? 'pending' : '';
+                const prClass = pr === 'urgent' ? 'cancelled' : pr === 'high' ? 'pending' : '';
+                const assigned = c.assignedTo ? (c.assignedTo.name || c.assignedTo.email || '') : (c.assignedToName || 'Unassigned');
+                const date = c.createdAt ? new Date(c.createdAt).toLocaleString() : '-';
+                return `<tr>
+                    <td><input type="checkbox"></td>
+                    <td><strong>${escHtml(c.ticketId || '—')}</strong></td>
+                    <td style="font-size:0.8rem;">${date}</td>
+                    <td><strong>${escHtml(c.name || 'N/A')}</strong><br><small style="color:var(--text-muted);font-size:0.7rem;">${escHtml(c.email || '')}</small></td>
+                    <td style="font-size:0.85rem;">${escHtml(c.subject || '')}</td>
+                    <td style="font-size:0.85rem;">${escStatus(c.category)}</td>
+                    <td><span class="status-badge ${prClass}">${escStatus(pr)}</span></td>
+                    <td><span class="status-badge ${stClass}">${escStatus(st)}</span></td>
+                    <td style="font-size:0.85rem;">${escHtml(assigned)}</td>
+                    <td style="text-align:right;white-space:nowrap;">
+                        <select onchange="updateContactStatus('${c._id}', this.value)" style="padding:3px 6px;border:1px solid var(--border-light);border-radius:4px;font-size:0.72rem;background:var(--bg-primary);color:var(--text-primary);">
+                            <option value="new" ${st === 'new' ? 'selected' : ''}>New</option>
+                            <option value="open" ${st === 'open' ? 'selected' : ''}>Open</option>
+                            <option value="read" ${st === 'read' ? 'selected' : ''}>Read</option>
+                            <option value="in_progress" ${st === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="pending" ${st === 'pending' ? 'selected' : ''}>Pending</option>
+                            <option value="waiting_for_customer" ${st === 'waiting_for_customer' ? 'selected' : ''}>Waiting</option>
+                            <option value="resolved" ${st === 'resolved' ? 'selected' : ''}>Resolved</option>
+                            <option value="closed" ${st === 'closed' ? 'selected' : ''}>Closed</option>
+                            <option value="spam" ${st === 'spam' ? 'selected' : ''}>Spam</option>
+                        </select>
+                    </td>
+                </tr>`;
+            }).join('');
+            renderContactPagination();
+        }
+
+        function renderContactPagination() {
+            const el = document.getElementById('contactPagination');
+            if (!el) return;
+            el.innerHTML = `<span>${contactsTotalItems} message(s)</span>`;
+            if (contactsTotalPages <= 1) return;
+            let html = `<span>Page ${contactsPage} of ${contactsTotalPages}</span>`;
+            html += `<span style="display:flex;gap:6px;">`;
+            if (contactsPage > 1) html += `<button class="page-btn" data-page="${contactsPage - 1}" style="padding:5px 10px;border:1px solid var(--border-light);border-radius:4px;cursor:pointer;font-size:0.78rem;background:var(--bg-primary);">&laquo; Prev</button>`;
+            for (let i = Math.max(1, contactsPage - 2); i <= Math.min(contactsTotalPages, contactsPage + 2); i++) {
+                html += `<button class="page-btn" data-page="${i}" style="padding:5px 10px;border:1px solid ${i === contactsPage ? 'var(--gold)' : 'var(--border-light)'};border-radius:4px;cursor:pointer;font-size:0.78rem;background:${i === contactsPage ? 'var(--gold)' : 'var(--bg-primary)'};color:${i === contactsPage ? '#fff' : 'inherit'};">${i}</button>`;
+            }
+            if (contactsPage < contactsTotalPages) html += `<button class="page-btn" data-page="${contactsPage + 1}" style="padding:5px 10px;border:1px solid var(--border-light);border-radius:4px;cursor:pointer;font-size:0.78rem;background:var(--bg-primary);">Next &raquo;</button>`;
+            html += `</span>`;
+            el.innerHTML += html;
+        }
+
+        async function updateContactStatus(id, status) {
+            try {
+                const res = await safeFetch(`${API_URL}/contact/${id}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status }) });
+                const d = await res.json();
+                showToast(d.success ? 'Contact status updated' : (d.message || 'Update failed'));
+                if (d.success) loadContacts();
+            } catch (e) { showToast('Error updating contact status'); }
+        }
+        document.getElementById('contactSearchInput')?.addEventListener('input', function () { clearTimeout(contactSearchTimer); contactSearchTimer = setTimeout(() => { contactsPage = 1; loadContacts(); }, 400); });
+        document.getElementById('contactStatusFilter')?.addEventListener('change', function () { contactsPage = 1; loadContacts(); });
+        document.getElementById('contactPriorityFilter')?.addEventListener('change', function () { contactsPage = 1; loadContacts(); });
+        document.getElementById('contactCategoryFilter')?.addEventListener('change', function () { contactsPage = 1; loadContacts(); });
+        document.getElementById('contactDateFrom')?.addEventListener('change', function () { contactsPage = 1; loadContacts(); });
+        document.getElementById('contactDateTo')?.addEventListener('change', function () { contactsPage = 1; loadContacts(); });
+        document.getElementById('contactPagination')?.addEventListener('click', function (e) { const b = e.target.closest('.page-btn'); if (b) { contactsPage = parseInt(b.dataset.page) || 1; loadContacts(); } });
+
+        /* REVIEW MANAGEMENT */
+        let reviewsData = [], reviewsPage = 1, reviewsTotalPages = 1, reviewsTotalItems = 0;
+        let reviewSearchTimer = null;
+
+        async function loadReviewStats() {
+            try {
+                const res = await safeFetch(`${API_URL}/reviews/admin/stats`, { headers: getHeaders() });
+                if (!res.ok) return;
+                const d = await res.json();
+                if (!d.success || !d.data) return;
+                const s = d.data;
+                const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v ?? 0; };
+                set('revTotal', s.total); set('revPending', s.pending); set('revApproved', s.approved);
+                set('revHidden', s.hidden); set('revRejected', s.rejected); set('revReported', s.reported);
+                const avg = document.getElementById('revAvgRating'); if (avg) avg.textContent = s.avgRating != null ? s.avgRating + ' / 5' : '—';
+            } catch (e) { /* non-critical */ }
+        }
+
+        async function loadReviews(pg) {
+            loadReviewStats();
+            if (pg !== undefined) reviewsPage = pg;
+            const search = (document.getElementById('reviewSearchInput')?.value || '').trim();
+            const status = document.getElementById('reviewStatusFilter')?.value || '';
+            const rating = document.getElementById('reviewRatingFilter')?.value || '';
+            const verified = document.getElementById('reviewVerifiedFilter')?.value || '';
+            const featured = document.getElementById('reviewFeaturedFilter')?.value || '';
+            const params = new URLSearchParams({ page: reviewsPage, limit: 20 });
+            if (search) params.set('search', search);
+            if (status && status !== 'all') params.set('status', status);
+            if (rating && rating !== 'all') params.set('rating', rating);
+            if (verified === 'true') params.set('verified', 'true');
+            if (featured === 'true') params.set('featured', 'true');
+            try {
+                const res = await safeFetch(`${API_URL}/reviews/admin/all?${params}`, { headers: getHeaders() });
+                if (!res.ok) throw new Error('Failed');
+                const d = await res.json();
+                reviewsData = d.data || [];
+                const pag = d.pagination || {};
+                reviewsTotalPages = pag.pages || 1;
+                reviewsTotalItems = pag.total || reviewsData.length;
+                renderReviewsTable();
+            } catch (err) { showToast(err.message || 'Error loading reviews'); }
+        }
+
+        function renderReviewsTable() {
+            const tbody = document.getElementById('reviewsTableBody');
+            const pagEl = document.getElementById('reviewPagination');
+            if (!tbody) return;
+            if (!reviewsData.length) {
+                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);">No reviews found.</td></tr>';
+                if (pagEl) pagEl.innerHTML = '';
+                return;
+            }
+            tbody.innerHTML = reviewsData.map(r => {
+                const st = r.status || 'pending';
+                const stClass = st === 'approved' ? 'paid' : st === 'rejected' || st === 'hidden' ? 'cancelled' : 'pending';
+                const prod = r.product ? (r.product.name || '—') : '—';
+                const user = r.user ? (r.user.name || r.user.email || '—') : '—';
+                const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '-';
+                const rating = Math.max(0, Math.min(5, r.rating || 0));
+                const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+                return `<tr>
+                    <td><input type="checkbox"></td>
+                    <td style="font-size:0.85rem;">${escHtml(prod)}</td>
+                    <td style="font-size:0.85rem;">${escHtml(user)}</td>
+                    <td style="color:var(--gold);white-space:nowrap;">${stars}</td>
+                    <td style="font-size:0.85rem;"><strong>${escHtml(r.title || '')}</strong></td>
+                    <td style="font-size:0.8rem;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml((r.comment || '').slice(0, 90))}</td>
+                    <td style="font-size:0.8rem;">${r.verifiedPurchase ? '<span style="color:var(--success);">Verified</span>' : '<span style="color:var(--text-muted);">No</span>'}</td>
+                    <td><span class="status-badge ${stClass}">${escStatus(st)}</span></td>
+                    <td style="font-size:0.85rem;">${r.helpful || 0}</td>
+                    <td style="font-size:0.85rem;">${r.reportCount || 0}</td>
+                    <td style="font-size:0.85rem;">${date}</td>
+                    <td style="text-align:right;white-space:nowrap;">
+                        <button onclick="updateReviewStatus('${r._id}','approved')" style="padding:3px 8px;border:1px solid var(--success);border-radius:4px;cursor:pointer;font-size:0.7rem;background:var(--bg-primary);color:var(--success);">Approve</button>
+                        <button onclick="updateReviewStatus('${r._id}','hidden')" style="padding:3px 8px;border:1px solid var(--border-light);border-radius:4px;cursor:pointer;font-size:0.7rem;background:var(--bg-primary);color:var(--text-primary);">Hide</button>
+                        <button onclick="updateReviewStatus('${r._id}','rejected')" style="padding:3px 8px;border:1px solid var(--error);border-radius:4px;cursor:pointer;font-size:0.7rem;background:var(--bg-primary);color:var(--error);">Reject</button>
+                    </td>
+                </tr>`;
+            }).join('');
+            renderReviewPagination();
+        }
+
+        function renderReviewPagination() {
+            const el = document.getElementById('reviewPagination');
+            if (!el) return;
+            el.innerHTML = `<span>${reviewsTotalItems} review(s)</span>`;
+            if (reviewsTotalPages <= 1) return;
+            let html = `<span>Page ${reviewsPage} of ${reviewsTotalPages}</span>`;
+            html += `<span style="display:flex;gap:6px;">`;
+            if (reviewsPage > 1) html += `<button class="page-btn" data-page="${reviewsPage - 1}" style="padding:5px 10px;border:1px solid var(--border-light);border-radius:4px;cursor:pointer;font-size:0.78rem;background:var(--bg-primary);">&laquo; Prev</button>`;
+            for (let i = Math.max(1, reviewsPage - 2); i <= Math.min(reviewsTotalPages, reviewsPage + 2); i++) {
+                html += `<button class="page-btn" data-page="${i}" style="padding:5px 10px;border:1px solid ${i === reviewsPage ? 'var(--gold)' : 'var(--border-light)'};border-radius:4px;cursor:pointer;font-size:0.78rem;background:${i === reviewsPage ? 'var(--gold)' : 'var(--bg-primary)'};color:${i === reviewsPage ? '#fff' : 'inherit'};">${i}</button>`;
+            }
+            if (reviewsPage < reviewsTotalPages) html += `<button class="page-btn" data-page="${reviewsPage + 1}" style="padding:5px 10px;border:1px solid var(--border-light);border-radius:4px;cursor:pointer;font-size:0.78rem;background:var(--bg-primary);">Next &raquo;</button>`;
+            html += `</span>`;
+            el.innerHTML += html;
+        }
+
+        async function updateReviewStatus(id, status) {
+            try {
+                const res = await safeFetch(`${API_URL}/reviews/${id}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status }) });
+                const d = await res.json();
+                showToast(d.success ? 'Review updated' : (d.message || 'Update failed'));
+                if (d.success) loadReviews();
+            } catch (e) { showToast('Error updating review'); }
+        }
+        document.getElementById('reviewSearchInput')?.addEventListener('input', function () { clearTimeout(reviewSearchTimer); reviewSearchTimer = setTimeout(() => { reviewsPage = 1; loadReviews(); }, 400); });
+        document.getElementById('reviewStatusFilter')?.addEventListener('change', function () { reviewsPage = 1; loadReviews(); });
+        document.getElementById('reviewRatingFilter')?.addEventListener('change', function () { reviewsPage = 1; loadReviews(); });
+        document.getElementById('reviewVerifiedFilter')?.addEventListener('change', function () { reviewsPage = 1; loadReviews(); });
+        document.getElementById('reviewFeaturedFilter')?.addEventListener('change', function () { reviewsPage = 1; loadReviews(); });
+        document.getElementById('reviewPagination')?.addEventListener('click', function (e) { const b = e.target.closest('.page-btn'); if (b) { reviewsPage = parseInt(b.dataset.page) || 1; loadReviews(); } });
+
+        /* INVENTORY MANAGEMENT */
+        let inventoryData = [], inventoryPage = 1, inventoryTotalPages = 1, inventoryTotalItems = 0;
+        let inventorySearchTimer = null;
+
+        async function loadInventoryStats() {
+            try {
+                const res = await safeFetch(`${API_URL}/inventory/stats`, { headers: getHeaders() });
+                if (!res.ok) return;
+                const d = await res.json();
+                if (!d.success || !d.data) return;
+                const s = d.data;
+                const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v ?? 0; };
+                set('invStatTotalProducts', s.totalProducts); set('invStatTotalStock', s.totalStock);
+                set('invStatInStock', s.inStock); set('invStatLowStock', s.lowStock);
+                set('invStatOutOfStock', s.outOfStock); set('invStatReserved', s.reservedStock);
+                set('invStatChanges', s.recentChanges);
+                const v = document.getElementById('invStatValue'); if (v) v.textContent = 'Ksh ' + (s.inventoryValue || 0).toLocaleString();
+            } catch (e) { /* non-critical */ }
+        }
+
+        async function loadInventory(pg) {
+            loadInventoryStats();
+            if (pg !== undefined) inventoryPage = pg;
+            const search = (document.getElementById('invSearch')?.value || '').trim();
+            const status = document.getElementById('invStatusFilter')?.value || '';
+            const sort = document.getElementById('invSort')?.value || '';
+            const params = new URLSearchParams({ page: inventoryPage, limit: 25 });
+            if (search) params.set('search', search);
+            if (status) params.set('status', status);
+            if (sort) params.set('sort', sort);
+            try {
+                const res = await safeFetch(`${API_URL}/inventory?${params}`, { headers: getHeaders() });
+                if (!res.ok) throw new Error('Failed');
+                const d = await res.json();
+                inventoryData = d.data || [];
+                const pag = d.pagination || {};
+                inventoryTotalPages = pag.pages || 1;
+                inventoryTotalItems = pag.total || inventoryData.length;
+                renderInventoryTable();
+            } catch (err) { showToast(err.message || 'Error loading inventory'); }
+        }
+
+        function renderInventoryTable() {
+            const tbody = document.getElementById('inventoryTableBody');
+            const pagEl = document.getElementById('invPagination');
+            if (!tbody) return;
+            if (!inventoryData.length) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--text-muted);">No inventory found.</td></tr>';
+                if (pagEl) pagEl.innerHTML = '';
+                return;
+            }
+            tbody.innerHTML = inventoryData.map(it => {
+                const p = it.product || {};
+                const img = (p.images && p.images.length) ? p.images[0] : '';
+                const st = it.status || '';
+                const stClass = st === 'in_stock' ? 'paid' : st === 'low_stock' ? 'pending' : 'cancelled';
+                const updated = it.updatedAt ? new Date(it.updatedAt).toLocaleDateString() : '-';
+                return `<tr>
+                    <td>${img ? `<img src="${escHtml(img)}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:4px;">` : '<span style="color:var(--text-muted);">—</span>'}</td>
+                    <td><strong>${escHtml(p.name || '—')}</strong></td>
+                    <td style="font-size:0.85rem;">${escHtml(it.sku || p.sku || '—')}</td>
+                    <td style="font-size:0.85rem;">${escHtml(p.category || '—')}</td>
+                    <td><strong>${it.quantity ?? 0}</strong></td>
+                    <td style="font-size:0.85rem;">${it.reservedQuantity ?? 0}</td>
+                    <td style="font-size:0.85rem;">${it.availableQuantity ?? 0}</td>
+                    <td style="font-size:0.85rem;">${it.lowStockThreshold ?? '—'}</td>
+                    <td><span class="status-badge ${stClass}">${escStatus(st)}</span></td>
+                    <td style="font-size:0.85rem;">${updated}</td>
+                    <td style="text-align:right;"><button onclick="viewInventoryProduct('${it._id}')" style="padding:3px 8px;border:1px solid var(--border-light);border-radius:4px;cursor:pointer;font-size:0.72rem;background:var(--bg-primary);">View</button></td>
+                </tr>`;
+            }).join('');
+            renderInvPagination();
+        }
+
+        function renderInvPagination() {
+            const el = document.getElementById('invPagination');
+            if (!el) return;
+            el.innerHTML = `<span>${inventoryTotalItems} item(s)</span>`;
+            if (inventoryTotalPages <= 1) return;
+            let html = `<span style="display:flex;gap:6px;">`;
+            if (inventoryPage > 1) html += `<button class="page-btn" data-page="${inventoryPage - 1}" style="padding:5px 10px;border:1px solid var(--border-light);border-radius:4px;cursor:pointer;font-size:0.78rem;background:var(--bg-primary);">&laquo; Prev</button>`;
+            for (let i = Math.max(1, inventoryPage - 2); i <= Math.min(inventoryTotalPages, inventoryPage + 2); i++) {
+                html += `<button class="page-btn" data-page="${i}" style="padding:5px 10px;border:1px solid ${i === inventoryPage ? 'var(--gold)' : 'var(--border-light)'};border-radius:4px;cursor:pointer;font-size:0.78rem;background:${i === inventoryPage ? 'var(--gold)' : 'var(--bg-primary)'};color:${i === inventoryPage ? '#fff' : 'inherit'};">${i}</button>`;
+            }
+            if (inventoryPage < inventoryTotalPages) html += `<button class="page-btn" data-page="${inventoryPage + 1}" style="padding:5px 10px;border:1px solid var(--border-light);border-radius:4px;cursor:pointer;font-size:0.78rem;background:var(--bg-primary);">Next &raquo;</button>`;
+            html += `</span>`;
+            el.innerHTML += html;
+        }
+
+        function viewInventoryProduct(id) {
+            const it = inventoryData.find(x => x._id === id);
+            if (it) showToast('SKU: ' + (it.sku || (it.product && it.product.sku) || '—') + ' | Available: ' + (it.availableQuantity ?? 0));
+        }
+        async function loadInventoryHistory() {
+            try {
+                const res = await safeFetch(`${API_URL}/inventory/history?limit=50`, { headers: getHeaders() });
+                if (!res.ok) return;
+                const d = await res.json();
+                const rows = d.data || [];
+                const tbody = document.getElementById('invHistoryBody');
+                if (!tbody) return;
+                if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">No history yet.</td></tr>'; return; }
+                tbody.innerHTML = rows.map(h => `<tr>
+                    <td style="font-size:0.85rem;"><strong>${escHtml(h.productName || '—')}</strong><br><small style="color:var(--text-muted);font-size:0.7rem;">${escHtml(h.productSku || '')}</small></td>
+                    <td style="font-size:0.85rem;">${h.previousQty ?? '—'}</td>
+                    <td style="font-size:0.85rem;">${h.newQty ?? '—'}</td>
+                    <td style="font-size:0.85rem;">${h.delta ?? '—'}</td>
+                    <td style="font-size:0.85rem;">${escStatus(h.type)}</td>
+                    <td style="font-size:0.85rem;">${escHtml(h.reason || '—')}</td>
+                    <td style="font-size:0.85rem;">${escHtml(h.admin || '—')}</td>
+                    <td style="font-size:0.85rem;">${h.createdAt ? new Date(h.createdAt).toLocaleString() : '-'}</td>
+                </tr>`).join('');
+            } catch (e) { /* non-critical */ }
+        }
+        async function exportInventory() {
+            try {
+                const res = await safeFetch(`${API_URL}/inventory/export`, { headers: getHeaders() });
+                if (!res.ok) { showToast('Export failed'); return; }
+                const blob = await res.blob();
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'inventory.csv'; a.click(); URL.revokeObjectURL(a.href);
+            } catch (e) { showToast('Export failed'); }
+        }
+        async function showAlertsModal() {
+            try {
+                const res = await safeFetch(`${API_URL}/inventory/alerts`, { headers: getHeaders() });
+                const d = await res.json();
+                const alerts = d.data || [];
+                if (!alerts.length) { showToast('No inventory alerts'); return; }
+                showToast(`${alerts.filter(a => a.severity === 'critical').length} critical, ${alerts.filter(a => a.severity === 'warning').length} low-stock alert(s)`);
+            } catch (e) { showToast('Failed to load alerts'); }
+        }
+        function showBulkUpdateModal() { showToast('Bulk inventory update is not available yet'); }
+        function showImportModal() { showToast('Inventory import is not available yet'); }
+        function switchInvTab(tab) {
+            document.querySelectorAll('.inv-tab').forEach(b => {
+                const on = b.dataset.invTab === tab;
+                b.classList.toggle('active', on);
+                b.style.borderBottom = on ? '2px solid var(--gold)' : '2px solid transparent';
+                b.style.color = on ? 'var(--gold)' : 'var(--text-muted)';
+            });
+            const list = document.getElementById('invListView'); const hist = document.getElementById('invHistoryView');
+            if (list) list.style.display = tab === 'list' ? '' : 'none';
+            if (hist) hist.style.display = tab === 'history' ? '' : 'none';
+            if (tab === 'history') loadInventoryHistory();
+        }
+        document.getElementById('invSearch')?.addEventListener('input', function () { clearTimeout(inventorySearchTimer); inventorySearchTimer = setTimeout(() => { inventoryPage = 1; loadInventory(); }, 400); });
+        document.getElementById('invStatusFilter')?.addEventListener('change', function () { inventoryPage = 1; loadInventory(); });
+        document.getElementById('invSort')?.addEventListener('change', function () { inventoryPage = 1; loadInventory(); });
+        document.getElementById('invPagination')?.addEventListener('click', function (e) { const b = e.target.closest('.page-btn'); if (b) { inventoryPage = parseInt(b.dataset.page) || 1; loadInventory(); } });
+
+        /* CATALOGUE MANAGEMENT */
+        async function loadCatalogues() {
+            const list = document.getElementById('cataloguesList');
+            if (!list) return;
+            try {
+                const res = await safeFetch(`${API_URL}/homepage/catalogues`, { headers: getHeaders() });
+                if (!res.ok) { list.innerHTML = '<p style="color:var(--text-muted);">Failed to load catalogues.</p>'; return; }
+                const d = await res.json();
+                const cats = d.data || [];
+                if (!cats.length) { list.innerHTML = '<p style="color:var(--text-muted);">No catalogues configured yet.</p>'; return; }
+                list.innerHTML = cats.map(c => `
+                    <div class="dash-card" style="padding:14px;">
+                        ${c.image ? `<img src="${escHtml(c.image)}" alt="" style="width:100%;height:150px;object-fit:cover;border-radius:8px;margin-bottom:10px;">` : ''}
+                        <h4 style="margin:0 0 4px;">${escHtml(c.title || 'Catalogue')}</h4>
+                        <p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 8px;">${escHtml(c.subtitle || '')}</p>
+                        <p style="font-size:0.78rem;margin:0 0 8px;">Button: ${escHtml(c.buttonText || 'Shop Now')} &rarr; ${escHtml(c.buttonLink || '/products')}</p>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <span class="status-badge ${c.visible === false ? 'cancelled' : 'paid'}">${c.visible === false ? 'Hidden' : 'Visible'}</span>
+                            <button onclick="toggleCatalogue('${c._id}','${c.visible === false ? 'true' : 'false'}')" style="padding:4px 10px;border:1px solid var(--border-light);border-radius:4px;cursor:pointer;font-size:0.72rem;background:var(--bg-primary);">${c.visible === false ? 'Show' : 'Hide'}</button>
+                        </div>
+                    </div>`).join('');
+            } catch (e) { list.innerHTML = '<p style="color:var(--text-muted);">Failed to load catalogues.</p>'; }
+        }
+        async function toggleCatalogue(id, visible) {
+            try {
+                const res = await safeFetch(`${API_URL}/homepage/catalogue/${id}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ visible: visible === 'true' }) });
+                const d = await res.json();
+                showToast(d.success ? 'Catalogue updated' : (d.message || 'Update failed'));
+                if (d.success) loadCatalogues();
+            } catch (e) { showToast('Error updating catalogue'); }
+        }
+
+        /* FEATURED COLLECTIONS */
+        let fcSelectedProducts = [], fcProductCache = {}, fcSearchTimer = null;
+        async function loadFeaturedCollections() {
+            try {
+                const res = await safeFetch(`${API_URL}/homepage`, { headers: getHeaders() });
+                if (!res.ok) throw new Error('Failed');
+                const d = await res.json();
+                const fc = (d.data && d.data.featuredCollections) || {};
+                const t = document.getElementById('fcTitle'); if (t) t.value = fc.title || 'Featured Collections';
+                const s = document.getElementById('fcSubtitle'); if (s) s.value = fc.subtitle || '';
+                fcSelectedProducts = (fc.products || []).map(p => ({ id: (p._id ? p._id.toString() : String(p)), name: (p.name || '').slice(0, 40) }));
+                renderFCSelected();
+            } catch (e) { showToast('Error loading featured collections'); }
+        }
+        function renderFCSelected() {
+            const wrap = document.getElementById('fcProductsList');
+            const count = document.getElementById('fcCount');
+            const empty = document.getElementById('fcEmptyMsg');
+            if (!wrap) return;
+            if (count) count.textContent = `(${fcSelectedProducts.length})`;
+            if (!fcSelectedProducts.length) { if (empty) empty.style.display = ''; wrap.innerHTML = ''; return; }
+            if (empty) empty.style.display = 'none';
+            wrap.innerHTML = fcSelectedProducts.map((item, i) => `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-card);border:1px solid var(--border-light);border-radius:20px;font-size:0.8rem;">
+                ${escHtml(item.name || item.id.slice(-6))}
+                <button onclick="removeFCProduct(${i})" style="border:none;background:none;cursor:pointer;color:var(--error);font-size:0.9rem;">&times;</button>
+            </span>`).join('');
+        }
+        function removeFCProduct(i) { fcSelectedProducts.splice(i, 1); renderFCSelected(); }
+        async function fcSearchProducts() {
+            const q = (document.getElementById('fcProductSearch')?.value || '').trim();
+            const box = document.getElementById('fcSearchResults');
+            if (!box) return;
+            if (!q) { box.style.display = 'none'; return; }
+            try {
+                const res = await safeFetch(`${API_URL}/admin/products?search=${encodeURIComponent(q)}&limit=8`, { headers: getHeaders() });
+                if (!res.ok) return;
+                const d = await res.json();
+                const prods = Array.isArray(d) ? d : (d.data || []);
+                fcProductCache = {};
+                prods.forEach(p => { fcProductCache[p._id] = p.name || 'Product'; });
+                box.innerHTML = prods.map(p => `<div onclick="addFCProduct('${p._id}')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);">${escHtml(p.name || 'Product')}</div>`).join('') || '<div style="padding:10px 14px;color:var(--text-muted);">No products found.</div>';
+                box.style.display = 'block';
+            } catch (e) { box.style.display = 'none'; }
+        }
+        function addFCProduct(id) {
+            if (fcSelectedProducts.some(x => x.id === id)) { showToast('Already added'); return; }
+            fcSelectedProducts.push({ id, name: (fcProductCache[id] || id.slice(-6)).slice(0, 40) });
+            renderFCSelected();
+            const box = document.getElementById('fcSearchResults'); if (box) box.style.display = 'none';
+            const inp = document.getElementById('fcProductSearch'); if (inp) inp.value = '';
+        }
+        async function saveFeaturedCollections() {
+            const title = document.getElementById('fcTitle')?.value || '';
+            const subtitle = document.getElementById('fcSubtitle')?.value || '';
+            try {
+                const res = await safeFetch(`${API_URL}/homepage`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ featuredCollections: { title, subtitle, products: fcSelectedProducts.map(x => x.id) } }) });
+                const d = await res.json();
+                showToast(d.success ? 'Featured collections saved' : (d.message || 'Save failed'));
+                if (d.success) loadFeaturedCollections();
+            } catch (e) { showToast('Error saving featured collections'); }
+        }
+        document.getElementById('fcProductSearch')?.addEventListener('input', function () { clearTimeout(fcSearchTimer); fcSearchTimer = setTimeout(fcSearchProducts, 350); });
+        document.getElementById('fcSearchResults')?.addEventListener('click', function (e) { if (e.target.classList.contains('fc-add')) return; });
+        document.getElementById('saveFeaturedCollectionsBtn')?.addEventListener('click', saveFeaturedCollections);
+
+        /* SOCIAL LINKS */
+        const SOCIAL_PLATFORMS = ['facebook', 'instagram', 'tiktok', 'twitter', 'pinterest', 'linkedin', 'youtube', 'whatsapp', 'threads', 'telegram', 'snapchat'];
+        async function loadSocialLinks() {
+            const wrap = document.getElementById('socialLinksForm');
+            if (!wrap) return;
+            try {
+                const res = await safeFetch(`${API_URL}/social-links`, { headers: getHeaders() });
+                const d = await res.json();
+                const raw = d.data || {};
+                const links = (raw.toObject ? raw.toObject() : raw) || {};
+                wrap.innerHTML = SOCIAL_PLATFORMS.map(p => {
+                    const v = links[p] || {};
+                    const url = typeof v === 'string' ? v : (v.url || '');
+                    const enabled = typeof v === 'string' ? !!v : (v.enabled !== false);
+                    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-light);">
+                        <label style="width:120px;font-size:0.85rem;text-transform:capitalize;">${p}</label>
+                        <input type="checkbox" data-plat="${p}" data-field="enabled" ${enabled ? 'checked' : ''} style="accent-color:var(--gold);" />
+                        <input type="url" data-plat="${p}" data-field="url" value="${escHtml(url)}" placeholder="https://..." style="flex:1;padding:7px 10px;border:1px solid var(--border-light);border-radius:4px;font-size:0.85rem;background:var(--bg-primary);" />
+                    </div>`;
+                }).join('');
+                wrap.querySelectorAll('input[data-plat]').forEach(inp => inp.addEventListener('change', saveSocialLinks));
+            } catch (e) { showToast('Error loading social links'); }
+        }
+        async function saveSocialLinks() {
+            const wrap = document.getElementById('socialLinksForm');
+            if (!wrap) return;
+            const body = {};
+            SOCIAL_PLATFORMS.forEach(p => {
+                const el = wrap.querySelectorAll(`input[data-plat="${p}"]`);
+                body[p] = { url: el[1] ? el[1].value.trim() : '', enabled: el[0] ? el[0].checked : false, openInNewTab: true };
+            });
+            try {
+                const res = await safeFetch(`${API_URL}/social-links`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(body) });
+                const d = await res.json();
+                showToast(d.success ? 'Social links saved' : (d.message || 'Save failed'));
+            } catch (e) { showToast('Error saving social links'); }
+        }
+
+        /* BRANDING (logo & favicon) */
+        async function loadBrandingData() {
+            try {
+                const res = await safeFetch(`${API_URL}/settings/branding`, { headers: getHeaders() });
+                if (!res.ok) return;
+                const d = await res.json();
+                const b = d.data || {};
+                const fv = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+                fv('brStoreName', b.storeName); fv('brTagline', b.tagline); fv('brBrandDescription', b.brandDescription);
+                fv('brCompanyName', b.companyName); fv('brCopyright', b.copyright); fv('brBusinessReg', b.businessRegistrationNumber);
+                fv('brLanguage', b.defaultLanguage); fv('brCurrency', b.currency); fv('brCurrencySymbol', b.currencySymbol);
+                fv('brTimezone', b.timezone); fv('brAnnouncementText', b.announcementText);
+                const ann = document.getElementById('brAnnouncementEnabled'); if (ann) ann.checked = !!b.announcementEnabled;
+                fv('cpPrimary', b.primaryColor); fv('cpSecondary', b.secondaryColor); fv('cpAccent', b.accentColor);
+                fv('cpBackground', b.backgroundColor); fv('cpText', b.textColor); fv('cpButton', b.buttonColor);
+                fv('brPrimaryFont', b.primaryFont); fv('brSecondaryFont', b.secondaryFont); fv('brHeadingFont', b.headingFont);
+                const logos = [b.logo, b.logoLight, b.logoDark, b.secondaryLogo, b.mobileLogo, b.footerLogo].filter(Boolean);
+                const lg = document.getElementById('logosGrid');
+                if (lg) lg.innerHTML = logos.length ? logos.map(u => `<img src="${escHtml(u)}" alt="" style="width:120px;height:60px;object-fit:contain;border:1px solid var(--border-light);border-radius:6px;padding:6px;background:#fff;">`).join('') : '<p style="color:var(--text-muted);">No logos uploaded.</p>';
+                const fg = document.getElementById('faviconGrid');
+                if (fg) fg.innerHTML = [b.favicon, b.appleTouchIcon, b.androidIcon].filter(Boolean).length ? [b.favicon, b.appleTouchIcon, b.androidIcon].filter(Boolean).map(u => `<img src="${escHtml(u)}" alt="" style="width:48px;height:48px;object-fit:contain;border:1px solid var(--border-light);border-radius:6px;padding:4px;background:#fff;">`).join('') : '<p style="color:var(--text-muted);">No favicons uploaded.</p>';
+            } catch (e) { /* non-critical */ }
+        }
+        async function saveBranding() {
+            const gv = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+            const body = {
+                storeName: gv('brStoreName'), tagline: gv('brTagline'), brandDescription: gv('brBrandDescription'),
+                companyName: gv('brCompanyName'), copyright: gv('brCopyright'), businessRegistrationNumber: gv('brBusinessReg'),
+                defaultLanguage: gv('brLanguage'), currency: gv('brCurrency'), currencySymbol: gv('brCurrencySymbol'),
+                timezone: gv('brTimezone'), announcementText: gv('brAnnouncementText'),
+                announcementEnabled: !!(document.getElementById('brAnnouncementEnabled')?.checked),
+                primaryColor: gv('cpPrimary'), secondaryColor: gv('cpSecondary'), accentColor: gv('cpAccent'),
+                backgroundColor: gv('cpBackground'), textColor: gv('cpText'), buttonColor: gv('cpButton'),
+                primaryFont: gv('brPrimaryFont'), secondaryFont: gv('brSecondaryFont'), headingFont: gv('brHeadingFont')
+            };
+            try {
+                const res = await safeFetch(`${API_URL}/settings/branding`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(body) });
+                const d = await res.json();
+                showToast(d.success ? 'Branding saved' : (d.message || 'Save failed'));
+            } catch (e) { showToast('Error saving branding'); }
+        }
+        document.getElementById('saveBrandingBtn')?.addEventListener('click', saveBranding);
+
+        /* MEDIA LIBRARY */
+        let mediaItems = [], mediaTotal = 0, mediaSearchTimer = null;
+        async function loadMediaLibrary() {
+            const grid = document.getElementById('mediaGrid');
+            if (!grid) return;
+            const folder = document.getElementById('mediaFolderFilter')?.value || '';
+            const q = (document.getElementById('mediaSearchInput')?.value || '').trim();
+            const url = q ? `${API_URL}/media/search?q=${encodeURIComponent(q)}&limit=50` : `${API_URL}/media?folder=${encodeURIComponent(folder || 'trendy-wardrobe')}&limit=50`;
+            try {
+                const res = await safeFetch(url, { headers: getHeaders() });
+                if (!res.ok) { grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">Failed to load media.</p>'; return; }
+                const d = await res.json();
+                mediaItems = d.data || [];
+                mediaTotal = d.total || mediaItems.length;
+                if (!mediaItems.length) { grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">No media found.</p>'; return; }
+                grid.innerHTML = mediaItems.map(m => `<div style="border:1px solid var(--border-light);border-radius:8px;overflow:hidden;background:var(--bg-secondary);">
+                    <img src="${escHtml(m.url)}" alt="" style="width:100%;height:120px;object-fit:cover;display:block;" loading="lazy" />
+                    <div style="padding:8px;">
+                        <div style="font-size:0.72rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(m.publicId)}">${escHtml(m.publicId || '')}</div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+                            <span style="font-size:0.7rem;color:var(--text-muted);">${m.format || ''}</span>
+                            <button onclick="deleteMedia('${m.publicId}')" style="border:none;background:none;cursor:pointer;color:var(--error);font-size:0.85rem;">&times;</button>
+                        </div>
+                    </div>
+                </div>`).join('');
+                const pag = document.getElementById('mediaPagination');
+                if (pag) pag.innerHTML = `<span>${mediaItems.length} shown &middot; ${mediaTotal} total</span>`;
+            } catch (e) { grid.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">Failed to load media.</p>'; }
+        }
+        async function deleteMedia(publicId) {
+            if (!confirm('Delete this media asset?')) return;
+            try {
+                const res = await safeFetch(`${API_URL}/media/${encodeURIComponent(publicId)}`, { method: 'DELETE', headers: getHeaders() });
+                const d = await res.json();
+                showToast(d.success ? 'Media deleted' : (d.message || 'Delete failed'));
+                if (d.success) loadMediaLibrary();
+            } catch (e) { showToast('Error deleting media'); }
+        }
+        async function uploadMedia() {
+            const input = document.getElementById('mediaFileInput');
+            if (!input) return;
+            input.onchange = async () => {
+                if (!input.files || !input.files[0]) return;
+                const fd = new FormData();
+                fd.append('file', input.files[0]);
+                fd.append('folder', document.getElementById('mediaFolderFilter')?.value || 'trendy-wardrobe');
+                try {
+                    const res = await fetch(`${API_URL}/media/upload`, { method: 'POST', headers: { 'Authorization': `Bearer ${getToken()}` }, body: fd });
+                    const d = await res.json();
+                    showToast(d.success ? 'Uploaded' : (d.message || 'Upload failed'));
+                    if (d.success) loadMediaLibrary();
+                } catch (e) { showToast('Upload failed'); }
+                input.value = '';
+            };
+            input.click();
+        }
+        document.getElementById('refreshMediaBtn')?.addEventListener('click', loadMediaLibrary);
+        document.getElementById('uploadMediaBtn')?.addEventListener('click', uploadMedia);
+        document.getElementById('mediaSearchInput')?.addEventListener('input', function () { clearTimeout(mediaSearchTimer); mediaSearchTimer = setTimeout(loadMediaLibrary, 400); });
+        document.getElementById('mediaFolderFilter')?.addEventListener('change', loadMediaLibrary);
 
         async function loadDashboard() { try { startNotificationPolling(); } catch(e) {} await loadDashboardData(); await Promise.all([loadProducts(),loadCategories()]); loadOrders(); loadCustomers(); }
 
@@ -8088,18 +8910,573 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
 // MISSING LOADER FUNCTIONS
 // ============================================================
-function loadWishlistAnalytics() {
-    const el = document.getElementById('wishlistAnalytics');
-    if (el) el.innerHTML = '<p style="text-align:center;padding:40px;color:#999;">Wishlist analytics will appear here once customers start using the wishlist feature.</p>';
+function _fmtDate(v) { if (!v) return '—'; const d = new Date(v); return isNaN(d) ? '—' : d.toLocaleDateString(); }
+function _fmtKsh(v) { return 'Ksh ' + Number(v || 0).toLocaleString(); }
+function _downloadCSV(filename, rows) {
+    const csv = rows.map(r => r.map(v => '"' + String(v === undefined || v === null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
 }
-function loadSearchData() {
-    const el = document.getElementById('searchAnalytics');
-    if (el) el.innerHTML = '<p style="text-align:center;padding:40px;color:#999;">Search analytics will appear once search queries are tracked.</p>';
+function _renderList(el, items, fmt) {
+    if (!el) return;
+    if (!items || !items.length) { el.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">No data yet.</p>'; return; }
+    el.innerHTML = items.map(fmt).join('');
+}
+
+/* ===== PAYMENTS ===== */
+async function loadPayments() {
+    const tbody = document.getElementById('paymentsTableBody');
+    if (!tbody) return;
+    try {
+        const res = await safeFetch(`${API_URL}/system/settings`, { headers: getHeaders() });
+        const body = await res.json();
+        if (!body.success) throw new Error('Failed to load settings');
+        const set = body.data.settings || {};
+        const methods = Array.isArray(set.paymentMethods) ? set.paymentMethods : [];
+        if (!methods.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No payment methods configured.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = methods.map(m => {
+            const name = typeof m === 'string' ? m : (m.name || m.method || JSON.stringify(m));
+            const enabled = (typeof m === 'object' && m !== null && typeof m.enabled !== 'undefined') ? m.enabled : true;
+            return `<tr>
+                <td>${escHtml(String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) || '—'}</td>
+                <td>—</td><td>—</td>
+                <td>${escHtml(name)}</td>
+                <td><span style="color:${enabled ? 'var(--success)' : 'var(--error)'};">${enabled ? 'Enabled' : 'Disabled'}</span></td>
+                <td>—</td>
+            </tr>`;
+        }).join('');
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--error);">Failed to load payments.</td></tr>';
+    }
+}
+
+/* ===== SELLERS ===== */
+let _sellersData = [], _sellersPage = 1, _sellersPages = 1, _sellersTotal = 0;
+async function loadSellers() {
+    const tbody = document.getElementById('sellersTableBody');
+    const btn = document.getElementById('exportSellersBtn');
+    if (!tbody) return;
+    try {
+        const res = await safeFetch(`${API_URL}/users?role=seller&page=${_sellersPage}&limit=50`, { headers: getHeaders() });
+        const body = await res.json();
+        if (!body.success) throw new Error('Failed to load sellers');
+        _sellersData = body.data || [];
+        _sellersTotal = body.pagination?.total || _sellersData.length;
+        _sellersPages = body.pagination?.pages || 1;
+        if (btn) btn.style.display = _sellersData.length ? 'inline-flex' : 'none';
+        if (!_sellersData.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No seller accounts found. Sellers register through the storefront and appear here once their account is created with the seller role.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = _sellersData.map(u => `<tr>
+            <td><strong>${escHtml(u.name || '—')}</strong></td>
+            <td>${escHtml(u.email || '—')}</td>
+            <td>${escHtml(u.phone || '—')}</td>
+            <td><span style="color:${u.status === 'active' ? 'var(--success)' : u.status === 'suspended' ? 'var(--warning)' : 'var(--error)'};">${escHtml(u.status || '—')}</span></td>
+            <td>${_fmtDate(u.createdAt)}</td>
+        </tr>`).join('');
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--error);">Failed to load sellers.</td></tr>';
+    }
+}
+function exportSellersCSV() {
+    if (!_sellersData.length) { showToast('No sellers to export'); return; }
+    _downloadCSV('sellers.csv', [['Name', 'Email', 'Phone', 'Status', 'Joined'], ..._sellersData.map(u => [u.name || '', u.email || '', u.phone || '', u.status || '', u.createdAt || ''])]);
+    showToast('Sellers exported');
+}
+
+/* ===== SEARCH & DISCOVERY ===== */
+let _searchData = null;
+async function loadSearchData() {
+    const ids = ['srTotalSearches', 'srZeroResultsRate', 'srConversionRate', 'srAvgResponseTime'];
+    try {
+        const res = await safeFetch(`${API_URL}/search/admin/analytics?days=30`, { headers: getHeaders() });
+        const body = await res.json();
+        if (!body.success) throw new Error('Failed to load search analytics');
+        _searchData = body.data || {};
+        const ov = _searchData.overview || {};
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        set('srTotalSearches', (ov.totalSearches || 0).toLocaleString());
+        set('srZeroResultsRate', (Number(ov.zeroResultsRate) || 0).toFixed(1) + '%');
+        set('srConversionRate', (Number(ov.conversionRate) || 0).toFixed(1) + '%');
+        set('srAvgResponseTime', (Number(ov.avgResponseTime) || 0).toFixed(0) + 'ms');
+        _renderList(document.getElementById('srTopQueries'), (_searchData.topQueries || []).slice(0, 10), q => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-light);font-size:0.82rem;"><span>${escHtml(q._id || q.query || '—')}</span><strong>${q.count || 0}</strong></div>`);
+        _renderList(document.getElementById('srZeroQueries'), (_searchData.zeroResultsQueries || []).slice(0, 10), q => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-light);font-size:0.82rem;"><span>${escHtml(q._id || q.query || '—')}</span><strong>${q.count || 0}</strong></div>`);
+        _renderList(document.getElementById('srTopCategories'), (_searchData.topCategories || []).slice(0, 10), c => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-light);font-size:0.82rem;"><span>${escHtml(c._id || c.category || '—')}</span><strong>${c.count || 0}</strong></div>`);
+        _renderList(document.getElementById('srTrending'), (_searchData.trendingGrowth || []).slice(0, 10), t => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-light);font-size:0.82rem;"><span>${escHtml(t.query || '—')}</span><strong>${t.count || 0}</strong></div>`);
+    } catch (e) {
+        ids.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
+        ['srTopQueries', 'srZeroQueries', 'srTopCategories', 'srTrending'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">Failed to load search analytics.</p>'; });
+    }
+}
+function exportSearchCSV() {
+    if (!_searchData) { showToast('No search data to export'); return; }
+    const rows = [['Query', 'Searches', 'Clicks', 'Conversions']];
+    (_searchData.topQueries || []).forEach(q => rows.push([q._id || q.query || '', q.count || 0, q.clicks || 0, q.conversions || 0]));
+    _downloadCSV('search-analytics.csv', rows);
+    showToast('Search analytics exported');
+}
+
+/* ===== WISHLIST ANALYTICS ===== */
+let _wishlistData = null;
+async function loadWishlistAnalytics() {
+    try {
+        const res = await safeFetch(`${API_URL}/admin/wishlist/stats`, { headers: getHeaders() });
+        const body = await res.json();
+        if (!body.success) throw new Error('Failed to load wishlist analytics');
+        _wishlistData = body.data || {};
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        set('wsTotalItems', (_wishlistData.totalItems || 0).toLocaleString());
+        set('wsTotalUsers', (_wishlistData.usersWithWishlists || 0).toLocaleString());
+        set('wsAvgItems', (_wishlistData.averageItemsPerUser || 0).toLocaleString());
+        set('wsTotalWishlists', (_wishlistData.totalWishlists || 0).toLocaleString());
+        const est = (_wishlistData.mostWishlisted || []).reduce((s, p) => s + (Number(p.price) || 0) * (Number(p.count) || 0), 0);
+        set('wsEstValue', _fmtKsh(est));
+        _renderList(document.getElementById('wsTopProducts'), (_wishlistData.mostWishlisted || []).slice(0, 10), p => `<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-light);font-size:0.82rem;"><span>${escHtml(p.name || 'Unknown product')} <small style="color:var(--text-muted);">(${escHtml(p.category || '')})</small></span><strong>${p.count || 0}×</strong></div>`);
+        _renderList(document.getElementById('wsTopCategories'), (_wishlistData.categoryStats || []).slice(0, 10), c => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-light);font-size:0.82rem;"><span>${escHtml(c._id || '—')}</span><strong>${c.count || 0}</strong></div>`);
+        _renderList(document.getElementById('wsRecentActivity'), (_wishlistData.recentActivity || []).slice(0, 15), a => `<div style="padding:6px 0;border-bottom:1px solid var(--border-light);font-size:0.82rem;">${escHtml(a.userName || 'A customer')} saved <strong>${escHtml(a.productName || 'a product')}</strong><br><small style="color:var(--text-muted);">${_fmtDate(a.addedAt)}</small></div>`);
+    } catch (e) {
+        ['wsTotalItems', 'wsTotalUsers', 'wsAvgItems', 'wsTotalWishlists'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '0'; });
+        const estEl = document.getElementById('wsEstValue'); if (estEl) estEl.textContent = 'Ksh 0';
+        ['wsTopProducts', 'wsTopCategories', 'wsRecentActivity'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<p style="color:var(--text-muted);font-size:0.8rem;">Failed to load wishlist analytics.</p>'; });
+    }
+}
+function exportWishlistCSV() {
+    if (!_wishlistData) { showToast('No wishlist data to export'); return; }
+    const rows = [['Product', 'Category', 'Count', 'Price']];
+    (_wishlistData.mostWishlisted || []).forEach(p => rows.push([p.name || '', p.category || '', p.count || 0, p.price || '']));
+    _downloadCSV('wishlist-analytics.csv', rows);
+    showToast('Wishlist analytics exported');
+}
+
+/* ===== RBAC PANEL ===== */
+let _rbacUserPage = 1, _rbacAuditPage = 1, _rbacTabInit = false;
+function initRbacTabs() {
+    if (_rbacTabInit) return;
+    _rbacTabInit = true;
+    document.querySelectorAll('#panel-rbac .settings-tabs [data-rbac-tab]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const tab = this.dataset.rbacTab;
+            document.querySelectorAll('#panel-rbac .settings-tabs [data-rbac-tab]').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('#panel-rbac .rbac-tab-content').forEach(p => p.style.display = 'none');
+            const el = document.getElementById('rbac-' + tab);
+            if (el) el.style.display = 'block';
+            if (tab === 'users') { loadRbacUsers(); loadRbacRoles(); loadRbacDepartments(); }
+            else if (tab === 'roles') loadRbacRoles();
+            else if (tab === 'departments') loadRbacDepartments();
+            else if (tab === 'sessions') loadRbacSessions();
+            else if (tab === 'audit') loadRbacAudit();
+            else if (tab === 'security') loadRbacSecurity();
+        });
+    });
+    const byId = id => document.getElementById(id);
+    byId('rbacAddUserBtn')?.addEventListener('click', () => openRbacUserModal());
+    byId('rbacExportUsersBtn')?.addEventListener('click', exportRbacUsersCSV);
+    byId('rbacAddRoleBtn')?.addEventListener('click', () => openRbacRoleModal());
+    byId('rbacAddDeptBtn')?.addEventListener('click', () => openRbacDeptModal());
+    byId('rbacUserSearchBtn')?.addEventListener('click', () => { _rbacUserPage = 1; loadRbacUsers(); });
+    byId('rbacAuditSearchBtn')?.addEventListener('click', () => { _rbacAuditPage = 1; loadRbacAudit(); });
+    byId('rbacAuditExportBtn')?.addEventListener('click', exportRbacAuditCSV);
+    byId('rbacSaveSecurityBtn')?.addEventListener('click', saveRbacSecurity);
+    byId('rbacSelectAll')?.addEventListener('change', function () {
+        document.querySelectorAll('#rbacUsersBody input[type="checkbox"]').forEach(cb => cb.checked = this.checked);
+    });
+    byId('rbacUserForm')?.addEventListener('submit', saveRbacUser);
+    byId('rbacRoleForm')?.addEventListener('submit', saveRbacRole);
+    byId('rbacDeptForm')?.addEventListener('submit', saveRbacDept);
+}
+function renderRbacPagination(elId, page, pages, pageVar, loadFn) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    if (!pages || pages <= 1) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    el.style.display = 'flex';
+    let html = '';
+    for (let i = 1; i <= pages; i++) {
+        html += `<button class="btn-add" style="padding:4px 10px;font-size:0.7rem;${i === page ? 'background:var(--gold);color:#fff;' : ''}" onclick="window._${pageVar}=${i};${loadFn}()">${i}</button>`;
+    }
+    el.innerHTML = html;
+}
+async function loadRbacUsers() {
+    const tbody = document.getElementById('rbacUsersBody');
+    if (!tbody) return;
+    try {
+        const search = document.getElementById('rbacUserSearch')?.value || '';
+        const role = document.getElementById('rbacUserRoleFilter')?.value || '';
+        const status = document.getElementById('rbacUserStatusFilter')?.value || '';
+        const qs = new URLSearchParams({ page: _rbacUserPage, limit: 20 });
+        if (search) qs.set('search', search);
+        if (role) qs.set('role', role);
+        if (status) qs.set('status', status);
+        const res = await safeFetch(`${API_URL}/system/admin-users?${qs}`, { headers: getHeaders() });
+        const body = await res.json();
+        if (!body.success) throw new Error('Failed to load admin users');
+        const users = body.data || [];
+        tbody.innerHTML = users.map(u => `<tr>
+            <td><input type="checkbox" value="${u._id}" /></td>
+            <td><strong>${escHtml(u.name || '')}</strong></td>
+            <td>${escHtml(u.username || '—')}</td>
+            <td>${escHtml(u.email || '—')}</td>
+            <td>${u.roleId && u.roleId.name ? escHtml(u.roleId.name) : 'Admin'}</td>
+            <td>${u.department && u.department.name ? escHtml(u.department.name) : '—'}</td>
+            <td><span style="color:${u.status === 'active' ? 'var(--success)' : u.status === 'suspended' ? 'var(--warning)' : 'var(--error)'};">${escHtml(u.status || 'active')}</span></td>
+            <td>${u.twoFactorEnabled ? '<span style="color:var(--success);">On</span>' : '<span style="color:var(--text-muted);">Off</span>'}</td>
+            <td>${u.lastLogin ? _fmtDate(u.lastLogin) : '—'}</td>
+            <td style="display:flex;gap:4px;">
+                <button class="btn-add" style="padding:4px 8px;font-size:0.7rem;" onclick="editRbacUser('${u._id}')"><i class="fas fa-edit"></i></button>
+                ${u.status === 'active' ? `<button class="btn-add" style="padding:4px 8px;font-size:0.7rem;background:var(--warning);" onclick="suspendRbacUser('${u._id}')"><i class="fas fa-pause"></i></button>` : `<button class="btn-add" style="padding:4px 8px;font-size:0.7rem;background:var(--success);" onclick="activateRbacUser('${u._id}')"><i class="fas fa-play"></i></button>`}
+            </td>
+        </tr>`).join('');
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        set('rbacStatTotal', body.total || users.length);
+        set('rbacStatActive', users.filter(u => u.status === 'active').length);
+        set('rbacStatSuspended', users.filter(u => u.status === 'suspended').length);
+        renderRbacPagination('rbacUsersPagination', body.page, body.pages, 'rbacUserPage', 'loadRbacUsers');
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--error);">Failed to load admin users.</td></tr>';
+    }
+}
+async function loadRbacRoles() {
+    const tbody = document.getElementById('rbacRolesBody');
+    if (!tbody) return;
+    try {
+        const res = await safeFetch(`${API_URL}/system/roles`, { headers: getHeaders() });
+        const body = await res.json();
+        if (!body.success) throw new Error('Failed to load roles');
+        const roles = body.data || [];
+        tbody.innerHTML = roles.map(r => `<tr>
+            <td><strong>${escHtml(r.name)}</strong>${r.isSystem ? ' <span style="color:var(--gold);font-size:0.7rem;">[SYSTEM]</span>' : ''}</td>
+            <td>${escHtml(r.slug || '—')}</td>
+            <td>${escHtml(r.description || '—')}</td>
+            <td>${r.userCount || 0}</td>
+            <td>${r.priority || 0}</td>
+            <td>${r.isSystem ? '<span style="color:var(--success);">Yes</span>' : '<span style="color:var(--text-muted);">No</span>'}</td>
+            <td><button class="btn-add" style="padding:4px 8px;font-size:0.7rem;" onclick="editRbacRole('${r._id}')"><i class="fas fa-edit"></i></button>
+            ${!r.isSystem ? `<button class="btn-add" style="padding:4px 8px;font-size:0.7rem;background:var(--error);" onclick="deleteRbacRole('${r._id}')"><i class="fas fa-trash"></i></button>` : ''}</td>
+        </tr>`).join('');
+        const el = document.getElementById('rbacStatRoles'); if (el) el.textContent = roles.length;
+        const opts = roles.map(r => ({ value: r._id, label: r.name }));
+        populateSelect('rbacUserRole', opts, '');
+        populateSelect('rbacUserRoleFilter', [{ value: '', label: 'All Roles' }, ...opts], document.getElementById('rbacUserRoleFilter')?.value || '');
+        const modSel = document.getElementById('rbacAuditModuleFilter');
+        if (modSel) {
+            const moduleNames = [...new Set(roles.flatMap(r => (r.permissions || []).map(p => p.module)))];
+            moduleNames.forEach(m => { if (!Array.from(modSel.options).some(o => o.value === m)) { const o = document.createElement('option'); o.value = m; o.textContent = m.charAt(0).toUpperCase() + m.slice(1).replace(/-/g, ' '); modSel.appendChild(o); } });
+        }
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--error);">Failed to load roles.</td></tr>';
+    }
+}
+async function loadRbacDepartments() {
+    const tbody = document.getElementById('rbacDeptsBody');
+    if (!tbody) return;
+    try {
+        const res = await safeFetch(`${API_URL}/system/departments`, { headers: getHeaders() });
+        const body = await res.json();
+        if (!body.success) throw new Error('Failed to load departments');
+        const depts = body.data || [];
+        tbody.innerHTML = depts.map(d => `<tr>
+            <td><strong>${escHtml(d.name)}</strong></td>
+            <td>${escHtml(d.slug || '—')}</td>
+            <td>${d.managerId && d.managerId.name ? escHtml(d.managerId.name) : '—'}</td>
+            <td>${d.userCount || 0}</td>
+            <td>${d.isActive === false ? '<span style="color:var(--error);">Inactive</span>' : '<span style="color:var(--success);">Active</span>'}</td>
+            <td><button class="btn-add" style="padding:4px 8px;font-size:0.7rem;" onclick="editRbacDept('${d._id}')"><i class="fas fa-edit"></i></button>
+            <button class="btn-add" style="padding:4px 8px;font-size:0.7rem;background:var(--error);" onclick="deleteRbacDept('${d._id}')"><i class="fas fa-trash"></i></button></td>
+        </tr>`).join('');
+        const el = document.getElementById('rbacStatDepartments'); if (el) el.textContent = depts.length;
+        populateSelect('rbacDeptManager', depts.map(d => ({ value: d._id, label: d.name })), '');
+        populateSelect('rbacUserDept', [{ value: '', label: 'Select Department' }, ...depts.map(d => ({ value: d._id, label: d.name }))], '');
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--error);">Failed to load departments.</td></tr>';
+    }
+}
+async function loadRbacSessions() {
+    const tbody = document.getElementById('rbacSessionsBody');
+    if (!tbody) return;
+    try {
+        const res = await safeFetch(`${API_URL}/system/sessions?page=1&limit=50`, { headers: getHeaders() });
+        const body = await res.json();
+        if (!body.success) throw new Error('Failed to load sessions');
+        const sessions = body.data || [];
+        tbody.innerHTML = sessions.map(s => `<tr>
+            <td>${s.userId && s.userId.name ? escHtml(s.userId.name) : (s.userId ? escHtml(s.userId) : '—')}</td>
+            <td>${escHtml(s.ipAddress || '—')}</td>
+            <td>${escHtml(s.browser || '—')}</td>
+            <td>${escHtml(s.os || '—')}</td>
+            <td>${s.deviceId && s.deviceId.name ? escHtml(s.deviceId.name) : (s.device || '—')}</td>
+            <td>${_fmtDate(s.lastActivity)}</td>
+            <td>${_fmtDate(s.createdAt)}</td>
+            <td>${s.isActive === false ? '<span style="color:var(--text-muted);">Terminated</span>' : `<button class="btn-add" style="padding:4px 8px;font-size:0.7rem;background:var(--error);" onclick="terminateRbacSession('${s._id}')"><i class="fas fa-sign-out-alt"></i></button>`}</td>
+        </tr>`).join('');
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--error);">Failed to load sessions.</td></tr>';
+    }
+}
+async function loadRbacAudit() {
+    const tbody = document.getElementById('rbacAuditBody');
+    if (!tbody) return;
+    try {
+        const search = document.getElementById('rbacAuditSearch')?.value || '';
+        const module = document.getElementById('rbacAuditModuleFilter')?.value || '';
+        const action = document.getElementById('rbacAuditActionFilter')?.value || '';
+        const qs = new URLSearchParams({ page: _rbacAuditPage, limit: 20 });
+        if (search) qs.set('search', search);
+        if (module) qs.set('module', module);
+        if (action) qs.set('action', action);
+        const res = await safeFetch(`${API_URL}/system/audit-logs?${qs}`, { headers: getHeaders() });
+        const body = await res.json();
+        if (!body.success) throw new Error('Failed to load audit logs');
+        const logs = body.data || [];
+        tbody.innerHTML = logs.map(l => `<tr>
+            <td>${l.createdAt ? new Date(l.createdAt).toLocaleString() : '—'}</td>
+            <td>${escHtml(l.userName || (l.userId && l.userId.name) || '—')}</td>
+            <td><span style="font-weight:600;text-transform:capitalize;">${escHtml(l.action)}</span></td>
+            <td>${escHtml(l.module || '—')}</td>
+            <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(l.description || '')}">${escHtml(l.description || '—')}</td>
+            <td>${escHtml(l.ipAddress || '—')}</td>
+            <td>${escHtml(l.status || '—')}</td>
+        </tr>`).join('');
+        renderRbacPagination('rbacAuditPagination', body.page, body.pages, 'rbacAuditPage', 'loadRbacAudit');
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--error);">Failed to load audit logs.</td></tr>';
+    }
+}
+async function loadRbacSecurity() {
+    const gv = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    try {
+        const res = await safeFetch(`${API_URL}/system/security-policy`, { headers: getHeaders() });
+        const body = await res.json();
+        if (!body.success) throw new Error('Failed to load security policy');
+        const p = body.data || {};
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+        set('rbacSecMinLength', p.passwordMinLength ?? 8);
+        set('rbacSecMaxAttempts', p.maxLoginAttempts ?? 5);
+        set('rbacSecLockout', p.accountLockoutMinutes ?? 30);
+        set('rbacSecSessionTimeout', p.sessionTimeoutMinutes ?? 60);
+        if (p.jwtExpiration && ['1h', '24h', '7d', '30d'].includes(p.jwtExpiration)) set('rbacSecJwtExp', p.jwtExpiration);
+        set('rbacSecMaxSessions', p.maxSessionsPerUser ?? 5);
+        const el = document.getElementById('rbacSecEnforce2FA'); if (el) el.checked = !!p.enforceTwoFactor;
+    } catch (e) { showToast('Failed to load security policy'); }
+}
+async function saveRbacSecurity() {
+    const gv = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const gc = id => { const el = document.getElementById(id); return el ? el.checked : false; };
+    const payload = {
+        passwordMinLength: parseInt(gv('rbacSecMinLength')) || 8,
+        maxLoginAttempts: parseInt(gv('rbacSecMaxAttempts')) || 5,
+        accountLockoutMinutes: parseInt(gv('rbacSecLockout')) || 30,
+        sessionTimeoutMinutes: parseInt(gv('rbacSecSessionTimeout')) || 60,
+        jwtExpiration: gv('rbacSecJwtExp') || '7d',
+        maxSessionsPerUser: parseInt(gv('rbacSecMaxSessions')) || 5,
+        enforceTwoFactor: gc('rbacSecEnforce2FA')
+    };
+    try {
+        const res = await safeFetch(`${API_URL}/system/security-policy`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(payload) });
+        const body = await res.json();
+        if (body.success) showToast('Security policy saved');
+        else showToast(body.message || 'Error saving security policy');
+    } catch (e) { showToast('Error saving security policy'); }
+}
+function populateSelect(id, options, current) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = options.map(o => `<option value="${o.value}">${escHtml(o.label)}</option>`).join('');
+    if (current) el.value = current;
+}
+function openRbacUserModal(data) {
+    const m = document.getElementById('rbacUserModal');
+    if (!m) return;
+    document.getElementById('rbacUserFormTitle').textContent = data ? 'Edit Admin User' : 'Create Admin User';
+    document.getElementById('rbacUserId').value = data ? data._id : '';
+    const names = (data && data.name) ? data.name.split(' ') : [];
+    document.getElementById('rbacUserFirstName').value = names[0] || '';
+    document.getElementById('rbacUserLastName').value = names.slice(1).join(' ') || '';
+    document.getElementById('rbacUserUsername').value = data ? (data.username || '') : '';
+    document.getElementById('rbacUserEmail').value = data ? (data.email || '') : '';
+    document.getElementById('rbacUserPhone').value = data ? (data.phone || '') : '';
+    document.getElementById('rbacUserEmpId').value = data ? (data.employeeId || '') : '';
+    document.getElementById('rbacUserDept').value = data && data.department ? (typeof data.department === 'object' ? data.department._id : data.department) : '';
+    document.getElementById('rbacUserJobTitle').value = data ? (data.jobTitle || '') : '';
+    document.getElementById('rbacUserRole').value = data && data.roleId ? (typeof data.roleId === 'object' ? data.roleId._id : data.roleId) : '';
+    document.getElementById('rbacUserStatus').value = data ? (data.status || 'active') : 'active';
+    document.getElementById('rbacUserPassword').value = '';
+    document.getElementById('rbacUserPassword').required = !data;
+    document.getElementById('rbacUserConfirm').value = '';
+    document.getElementById('rbacUserNotes').value = data ? (data.notes || '') : '';
+    document.getElementById('rbacUserSubmitBtn').textContent = data ? 'Save User' : 'Create User';
+    m.classList.add('show');
+}
+function editRbacUser(id) {
+    safeFetch(`${API_URL}/system/admin-users/${id}`, { headers: getHeaders() }).then(r => r.json()).then(body => { if (body.success) openRbacUserModal(body.data); });
+}
+async function saveRbacUser(e) {
+    e.preventDefault();
+    const id = document.getElementById('rbacUserId').value;
+    const password = document.getElementById('rbacUserPassword').value;
+    const confirm = document.getElementById('rbacUserConfirm').value;
+    if (password && password !== confirm) { showToast('Passwords do not match'); return; }
+    const firstName = document.getElementById('rbacUserFirstName').value.trim();
+    const lastName = document.getElementById('rbacUserLastName').value.trim();
+    if (!firstName || !document.getElementById('rbacUserEmail').value.trim()) { showToast('Name and email are required'); return; }
+    const payload = {
+        name: (firstName + ' ' + lastName).trim(),
+        email: document.getElementById('rbacUserEmail').value.trim(),
+        username: document.getElementById('rbacUserUsername').value.trim(),
+        phone: document.getElementById('rbacUserPhone').value.trim(),
+        department: document.getElementById('rbacUserDept').value || null,
+        roleId: document.getElementById('rbacUserRole').value || null,
+        status: document.getElementById('rbacUserStatus').value,
+        notes: document.getElementById('rbacUserNotes').value
+    };
+    if (password) payload.password = password;
+    try {
+        const url = id ? `${API_URL}/system/admin-users/${id}` : `${API_URL}/system/admin-users`;
+        const method = id ? 'PUT' : 'POST';
+        const res = await safeFetch(url, { method, headers: getHeaders(), body: JSON.stringify(payload) });
+        const body = await res.json();
+        if (body.success) { showToast(id ? 'Admin user updated' : 'Admin user created'); document.getElementById('rbacUserModal').classList.remove('show'); loadRbacUsers(); }
+        else showToast(body.message || 'Error saving admin user');
+    } catch (err) { showToast('Error saving admin user'); }
+}
+async function suspendRbacUser(id) {
+    if (!confirm('Suspend this admin user?')) return;
+    try {
+        const res = await safeFetch(`${API_URL}/system/admin-users/${id}/suspend`, { method: 'POST', headers: getHeaders() });
+        const body = await res.json();
+        if (body.success) { showToast('User suspended'); loadRbacUsers(); } else showToast(body.message || 'Error');
+    } catch (e) { showToast('Error suspending user'); }
+}
+async function activateRbacUser(id) {
+    try {
+        const res = await safeFetch(`${API_URL}/system/admin-users/${id}/activate`, { method: 'POST', headers: getHeaders() });
+        const body = await res.json();
+        if (body.success) { showToast('User activated'); loadRbacUsers(); } else showToast(body.message || 'Error');
+    } catch (e) { showToast('Error activating user'); }
+}
+const RBAC_MODULES = ['products', 'categories', 'orders', 'customers', 'inventory', 'reviews', 'coupons', 'homepage', 'branding', 'reports', 'settings', 'audit-logs', 'roles', 'admin-users', 'security', 'maintenance', 'backup', 'email-config'];
+const RBAC_ACTIONS = ['view', 'create', 'edit', 'delete', 'import', 'export', 'process', 'cancel', 'refund', 'approve', 'reject', 'publish', 'suspend', 'reset-password', 'force-logout', 'toggle', 'restore', 'test'];
+function openRbacRoleModal(data) {
+    const m = document.getElementById('rbacRoleModal');
+    if (!m) return;
+    document.getElementById('rbacRoleFormTitle').textContent = data ? 'Edit Role' : 'Create Role';
+    document.getElementById('rbacRoleId').value = data ? data._id : '';
+    document.getElementById('rbacRoleName').value = data ? (data.name || '') : '';
+    document.getElementById('rbacRoleSlug').value = data ? (data.slug || '') : '';
+    document.getElementById('rbacRoleDesc').value = data ? (data.description || '') : '';
+    document.getElementById('rbacRolePriority').value = data ? (data.priority ?? 10) : 10;
+    const perms = (data && data.permissions) || [];
+    const pm = document.getElementById('rbacPermissionMatrix');
+    pm.innerHTML = RBAC_MODULES.map(mod => {
+        const p = perms.find(perm => perm.module === mod);
+        return `<div style="border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px;"><strong style="display:block;margin-bottom:6px;font-size:0.8rem;text-transform:capitalize;">${mod.replace(/-/g, ' ')}</strong><div style="display:flex;flex-wrap:wrap;gap:4px;">${RBAC_ACTIONS.map(a => `<label style="font-size:0.7rem;display:flex;align-items:center;gap:3px;"><input type="checkbox" class="rbac-perm-chk" data-module="${mod}" data-action="${a}" ${p && p.actions.includes(a) ? 'checked' : ''} /> ${a}</label>`).join('')}</div></div>`;
+    }).join('');
+    m.classList.add('show');
+}
+function editRbacRole(id) {
+    safeFetch(`${API_URL}/system/roles/${id}`, { headers: getHeaders() }).then(r => r.json()).then(body => { if (body.success) openRbacRoleModal(body.data); });
+}
+async function saveRbacRole(e) {
+    e.preventDefault();
+    const id = document.getElementById('rbacRoleId').value;
+    const payload = {
+        name: document.getElementById('rbacRoleName').value.trim(),
+        slug: document.getElementById('rbacRoleSlug').value.trim(),
+        description: document.getElementById('rbacRoleDesc').value.trim(),
+        priority: parseInt(document.getElementById('rbacRolePriority').value) || 10,
+        permissions: []
+    };
+    document.querySelectorAll('.rbac-perm-chk:checked').forEach(cb => {
+        const mod = cb.dataset.module;
+        let p = payload.permissions.find(x => x.module === mod);
+        if (!p) { p = { module: mod, actions: [] }; payload.permissions.push(p); }
+        p.actions.push(cb.dataset.action);
+    });
+    try {
+        const url = id ? `${API_URL}/system/roles/${id}` : `${API_URL}/system/roles`;
+        const method = id ? 'PUT' : 'POST';
+        const res = await safeFetch(url, { method, headers: getHeaders(), body: JSON.stringify(payload) });
+        const body = await res.json();
+        if (body.success) { showToast('Role saved'); document.getElementById('rbacRoleModal').classList.remove('show'); loadRbacRoles(); }
+        else showToast(body.message || 'Error saving role');
+    } catch (err) { showToast('Error saving role'); }
+}
+async function deleteRbacRole(id) {
+    if (!confirm('Delete this role?')) return;
+    try {
+        const res = await safeFetch(`${API_URL}/system/roles/${id}`, { method: 'DELETE', headers: getHeaders() });
+        const body = await res.json();
+        if (body.success) { showToast('Role deleted'); loadRbacRoles(); } else showToast(body.message || 'Cannot delete role');
+    } catch (e) { showToast('Error deleting role'); }
+}
+function openRbacDeptModal(data) {
+    const m = document.getElementById('rbacDeptModal');
+    if (!m) return;
+    document.getElementById('rbacDeptFormTitle').textContent = data ? 'Edit Department' : 'Add Department';
+    document.getElementById('rbacDeptId').value = data ? data._id : '';
+    document.getElementById('rbacDeptName').value = data ? (data.name || '') : '';
+    document.getElementById('rbacDeptDesc').value = data ? (data.description || '') : '';
+    document.getElementById('rbacDeptManager').value = data && data.managerId ? (typeof data.managerId === 'object' ? data.managerId._id : data.managerId) : '';
+    m.classList.add('show');
+}
+function editRbacDept(id) {
+    safeFetch(`${API_URL}/system/departments/${id}`, { headers: getHeaders() }).then(r => r.json()).then(body => { if (body.success) openRbacDeptModal(body.data); });
+}
+async function saveRbacDept(e) {
+    e.preventDefault();
+    const id = document.getElementById('rbacDeptId').value;
+    const payload = {
+        name: document.getElementById('rbacDeptName').value.trim(),
+        description: document.getElementById('rbacDeptDesc').value.trim(),
+        managerId: document.getElementById('rbacDeptManager').value || null
+    };
+    try {
+        const url = id ? `${API_URL}/system/departments/${id}` : `${API_URL}/system/departments`;
+        const method = id ? 'PUT' : 'POST';
+        const res = await safeFetch(url, { method, headers: getHeaders(), body: JSON.stringify(payload) });
+        const body = await res.json();
+        if (body.success) { showToast('Department saved'); document.getElementById('rbacDeptModal').classList.remove('show'); loadRbacDepartments(); }
+        else showToast(body.message || 'Error saving department');
+    } catch (err) { showToast('Error saving department'); }
+}
+async function deleteRbacDept(id) {
+    if (!confirm('Delete this department?')) return;
+    try {
+        const res = await safeFetch(`${API_URL}/system/departments/${id}`, { method: 'DELETE', headers: getHeaders() });
+        const body = await res.json();
+        if (body.success) { showToast('Department deleted'); loadRbacDepartments(); } else showToast(body.message || 'Cannot delete department');
+    } catch (e) { showToast('Error deleting department'); }
+}
+async function terminateRbacSession(id) {
+    if (!confirm('Terminate this session?')) return;
+    try {
+        const res = await safeFetch(`${API_URL}/system/sessions/${id}`, { method: 'DELETE', headers: getHeaders() });
+        const body = await res.json();
+        if (body.success) { showToast('Session terminated'); loadRbacSessions(); } else showToast(body.message || 'Error');
+    } catch (e) { showToast('Error terminating session'); }
+}
+function exportRbacUsersCSV() {
+    if (!document.getElementById('rbacUsersBody')) return;
+    safeFetch(`${API_URL}/system/admin-users?limit=1000`, { headers: getHeaders() }).then(r => r.json()).then(body => {
+        if (!body.success || !body.data) return;
+        _downloadCSV('admin-users.csv', [['Name', 'Username', 'Email', 'Role', 'Department', 'Status', '2FA', 'Last Login'], ...body.data.map(u => [u.name || '', u.username || '', u.email || '', u.roleId && u.roleId.name ? u.roleId.name : '', u.department && u.department.name ? u.department.name : '', u.status || '', u.twoFactorEnabled ? 'Yes' : 'No', u.lastLogin ? new Date(u.lastLogin).toLocaleString() : ''])]);
+        showToast('Admin users exported');
+    }).catch(() => showToast('Error exporting admin users'));
+}
+function exportRbacAuditCSV() {
+    safeFetch(`${API_URL}/system/audit-logs/export?limit=5000`, { headers: getHeaders() }).then(r => r.text()).then(csv => {
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'audit-logs.csv'; a.click();
+        showToast('Audit logs exported');
+    }).catch(() => showToast('Error exporting audit logs'));
 }
 function loadRBAC() {
-    const el = document.getElementById('rbacContent');
-    if (el) {
-        el.innerHTML = '<p style="text-align:center;padding:40px;color:#999;">Role-based access control — Currently admin-only. Full RBAC with granular permissions coming soon.</p>';
-    }
+    initRbacTabs();
+    loadRbacUsers();
+    loadRbacRoles();
+    loadRbacDepartments();
 }
 </script>
