@@ -82,6 +82,22 @@ All design/layout/colors/fonts/responsiveness, product cards, product details pa
 checkout visual design, branding, and every working feature. Only stock/ordering/flag logic and
 the new repair script were changed.
 
+## Live Verification (completed 2026-08-04)
+- **DB repair applied** (`tools/repair-stock.js --apply`): 5 negative-stock coats → 0; 12
+  products at `stock=0/inStock=true` → `inStock:false, soldOut:true`; CHUNKY HEELS flag
+  inconsistency fixed (`stock=5, soldOut:true` → `inStock:true, soldOut:false`); 12 Inventory
+  docs created, 2 updated. Post-repair `/api/products` re-verified.
+- **End-to-end order test (live, authenticated, all 13 checks pass):** registered a throwaway
+  user; ordered 2x CHUNKY HEELS (stock 5 → 3); oversell of 999 rejected with
+  `400 Insufficient stock… Available: 3`; cancelled → stock restored to 5. Limited-pieces
+  product verified: `limitedPieces` 2 → 1 on order, restored to 2 on cancel. Test user + test
+  orders deleted afterwards.
+- **Inventory mirror verified:** 0 mismatches across all products — `Inventory.quantity/status`
+  matches `Product.stock`/`limitedPieces` for every product.
+- **Post-deploy stability:** 5 consecutive `/api/health` + `/api/products` samples — all
+  `200`, `database: connected`, uptime monotonically increasing (266→273s), products API
+  `success: true`. Result: **STABLE**.
+
 ## Recommendations
 1. Run `tools/repair-stock.js --apply` from a machine with Atlas access (or a Render one-off) to
    clean admin/Inventory display data.
