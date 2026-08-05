@@ -51,16 +51,20 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 app.use(mongoSanitize());
 
+const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000;
+const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX, 10) || 1200;
+const RATE_LIMIT_AUTH_MAX = parseInt(process.env.RATE_LIMIT_AUTH_MAX, 10) || 2000;
+
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 500,
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: RATE_LIMIT_MAX,
   message: { success: false, message: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 2000,
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: RATE_LIMIT_AUTH_MAX,
   message: { success: false, message: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
