@@ -3,10 +3,18 @@ const router = express.Router();
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { remember, invalidate } = require('../utils/cache');
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 function escapeRegex(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+const CATEGORY_TTL = 60 * 1000;
+
+function clearCategoryCache() {
+    invalidate('categories');
+    invalidate('products');
+}
 
 // Helper: attach product counts
 async function attachCounts(categories) {
@@ -42,12 +50,19 @@ router.get('/', async (req, res) => {
         else if (sort === 'order') sortOption = { displayOrder: 1, name: 1 };
         const pageNum = Math.max(1, parseInt(page));
         const limitNum = Math.min(500, Math.max(1, parseInt(limit)));
-        const [categories, total] = await Promise.all([
-            Category.find(filter).sort(sortOption).skip((pageNum - 1) * limitNum).limit(limitNum).populate('parent', 'name slug'),
-            Category.countDocuments(filter)
-        ]);
-        const withCount = await attachCounts(categories);
-        res.json({ success: true, data: withCount, pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) } });
+        const cacheKey = 'categories:list:' + JSON.stringify({
+            search: search || null, status: status || null, featured: featured || null,
+            parent: parent || null, sort: sort || null, page: pageNum, limit: limitNum
+        });
+        const data = await remember(cacheKey, CATEGORY_TTL, async () => {
+            const [categories, total] = await Promise.all([
+                Category.find(filter).sort(sortOption).skip((pageNum - 1) * limitNum).limit(limitNum).populate('parent', 'name slug'),
+                Category.countDocuments(filter)
+            ]);
+            const withCount = await attachCounts(categories);
+            return { withCount, total };
+        });
+        res.json({ success: true, data: data.withCount, pagination: { page: pageNum, limit: limitNum, total: data.total, pages: Math.ceil(data.total / limitNum) } });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
@@ -56,13 +71,16 @@ router.get('/', async (req, res) => {
 // GET /api/categories/tree – public, returns full hierarchy tree
 router.get('/tree', async (req, res) => {
     try {
-        const all = await Category.find({ status: { $ne: 'archived' } }).sort({ displayOrder: 1, name: 1 }).populate('parent', 'name slug').lean();
-        const withCount = await attachCounts(all);
-        const map = {}; const roots = [];
-        withCount.forEach(c => { map[c._id] = { ...c, children: [] }; });
-        withCount.forEach(c => {
-            if (c.parent && map[c.parent._id || c.parent]) map[c.parent._id || c.parent].children.push(map[c._id]);
-            else if (!c.parent) roots.push(map[c._id]);
+        const roots = await remember('categories:tree', CATEGORY_TTL, async () => {
+            const all = await Category.find({ status: { $ne: 'archived' } }).sort({ displayOrder: 1, name: 1 }).populate('parent', 'name slug').lean();
+            const withCount = await attachCounts(all);
+            const map = {}; const roots = [];
+            withCount.forEach(c => { map[c._id] = { ...c, children: [] }; });
+            withCount.forEach(c => {
+                if (c.parent && map[c.parent._id || c.parent]) map[c.parent._id || c.parent].children.push(map[c._id]);
+                else if (!c.parent) roots.push(map[c._id]);
+            });
+            return roots;
         });
         res.json({ success: true, data: roots });
     } catch (err) {
@@ -100,10 +118,14 @@ router.get('/stats', authenticateToken, requireAdmin, async (req, res) => {
 // GET /api/categories/:id
 router.get('/:id', async (req, res) => {
     try {
-        const category = await Category.findById(req.params.id).populate('parent', 'name slug');
-        if (!category) return res.status(404).json({ success: false, message: 'Category not found' });
-        const count = await Product.countDocuments({ category: category.slug });
-        res.json({ success: true, data: { ...category.toJSON(), productCount: count } });
+        const data = await remember('categories:byid:' + req.params.id, CATEGORY_TTL, async () => {
+            const category = await Category.findById(req.params.id).populate('parent', 'name slug');
+            if (!category) return null;
+            const count = await Product.countDocuments({ category: category.slug });
+            return { ...category.toJSON(), productCount: count };
+        });
+        if (!data) return res.status(404).json({ success: false, message: 'Category not found' });
+        res.json({ success: true, data });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
@@ -150,6 +172,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
             canonicalUrl: canonicalUrl || ''
         });
         await category.save();
+        clearCategoryCache();
         res.status(201).json({ success: true, data: category });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -164,6 +187,7 @@ router.put('/reorder', authenticateToken, requireAdmin, async (req, res) => {
         for (let i = 0; i < ids.length; i++) {
             await Category.findByIdAndUpdate(ids[i], { displayOrder: i });
         }
+        clearCategoryCache();
         res.json({ success: true, message: 'Reordered successfully' });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -181,6 +205,7 @@ router.put('/bulk-update', authenticateToken, requireAdmin, async (req, res) => 
             if (updates[key] !== undefined) safe[key] = updates[key];
         }
         const result = await Category.updateMany({ _id: { $in: ids } }, { $set: safe });
+        clearCategoryCache();
         res.json({ success: true, message: `${result.modifiedCount} categories updated` });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -193,6 +218,7 @@ router.delete('/bulk-delete', authenticateToken, requireAdmin, async (req, res) 
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || !ids.length) return res.status(400).json({ success: false, message: 'No categories selected' });
         const result = await Category.deleteMany({ _id: { $in: ids } });
+        clearCategoryCache();
         res.json({ success: true, message: `${result.deletedCount} categories deleted` });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -240,6 +266,7 @@ router.post('/import', authenticateToken, requireAdmin, async (req, res) => {
                 else { await new Category(data).save(); results.created++; }
             } catch (err) { results.errors.push({ row: i + 1, message: err.message }); }
         }
+        clearCategoryCache();
         res.json({ success: true, data: results, message: `${results.created} created, ${results.updated} updated, ${results.errors.length} errors` });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Import failed' });
@@ -259,6 +286,7 @@ router.post('/:id/duplicate', authenticateToken, requireAdmin, async (req, res) 
             displayOrder: 0
         });
         await newCat.save();
+        clearCategoryCache();
         res.json({ success: true, data: newCat });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -275,8 +303,9 @@ router.post('/bulk', authenticateToken, requireAdmin, async (req, res) => {
         else if (action === 'hide') update.status = 'hidden';
         else if (action === 'feature') update.featured = true;
         else if (action === 'unfeature') update.featured = false;
-        else if (action === 'delete') { await Category.deleteMany({ _id: { $in: ids } }); return res.json({ success: true, message: 'Categories deleted' }); }
+        else if (action === 'delete') { await Category.deleteMany({ _id: { $in: ids } }); clearCategoryCache(); return res.json({ success: true, message: 'Categories deleted' }); }
         await Category.updateMany({ _id: { $in: ids } }, update);
+        clearCategoryCache();
         res.json({ success: true, message: `Bulk ${action} successful` });
     } catch (err) { res.status(500).json({ success: false, message: 'Internal server error' }); }
 });
@@ -324,6 +353,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
         if (ogImage !== undefined) category.ogImage = ogImage;
         if (canonicalUrl !== undefined) category.canonicalUrl = canonicalUrl;
         await category.save();
+        clearCategoryCache();
         res.json({ success: true, data: category });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -337,6 +367,7 @@ router.put('/:id/status', authenticateToken, requireAdmin, async (req, res) => {
         if (!category) return res.status(404).json({ success: false, message: 'Category not found' });
         category.status = category.status === 'published' ? 'hidden' : 'published';
         await category.save();
+        clearCategoryCache();
         res.json({ success: true, data: category });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -350,6 +381,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
         await Category.updateMany({ parent: req.params.id }, { parent: null });
         const category = await Category.findByIdAndDelete(req.params.id);
         if (!category) return res.status(404).json({ success: false, message: 'Category not found' });
+        clearCategoryCache();
         res.json({ success: true, message: 'Category deleted' });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });

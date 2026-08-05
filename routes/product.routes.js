@@ -8,7 +8,16 @@ const multer = require('multer');
 const uploadMemory = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validate');
+const { remember, invalidate } = require('../utils/cache');
 function escapeRegex(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+const PRODUCT_TTL = 60 * 1000;
+const SEARCH_TTL = 30 * 1000;
+
+function clearProductCache() {
+    invalidate('products');
+    invalidate('categories');
+}
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -94,10 +103,21 @@ router.get('/', async (req, res) => {
         const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
         const skip = (pageNum - 1) * limitNum;
 
-        const [products, total] = await Promise.all([
-            Product.find(filter).sort(sort).skip(skip).limit(limitNum).lean(),
-            Product.countDocuments(filter)
-        ]);
+        const cacheKey = 'products:list:' + JSON.stringify({
+            category: category || null, gender: gender || null, search: search || null,
+            featured: featured || null, newArrival: newArrival || null, bestSeller: bestSeller || null,
+            flashSale: flashSale || null, sponsored: sponsored || null, brand: brand || null,
+            material: material || null, minPrice: minPrice || null, maxPrice: maxPrice || null,
+            minRating: minRating || null, sortBy: sortBy || null, page: pageNum, limit: limitNum
+        });
+
+        const { products, total } = await remember(cacheKey, PRODUCT_TTL, async () => {
+            const [products, total] = await Promise.all([
+                Product.find(filter).sort(sort).skip(skip).limit(limitNum).lean(),
+                Product.countDocuments(filter)
+            ]);
+            return { products, total };
+        });
 
         res.json({
             success: true,
@@ -119,8 +139,9 @@ router.get('/', async (req, res) => {
 router.get('/featured', async (req, res) => {
     try {
         const limit = Math.min(20, parseInt(req.query.limit) || 10);
-        const products = await Product.find({ featured: true, status: 'published' })
-            .sort({ createdAt: -1 }).limit(limit).lean();
+        const products = await remember('products:featured:' + limit, PRODUCT_TTL, () =>
+            Product.find({ featured: true, status: 'published' })
+                .sort({ createdAt: -1 }).limit(limit).lean());
         res.json({ success: true, data: products });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -131,8 +152,9 @@ router.get('/featured', async (req, res) => {
 router.get('/new-arrivals', async (req, res) => {
     try {
         const limit = Math.min(20, parseInt(req.query.limit) || 10);
-        const products = await Product.find({ isNewArrival: true, status: 'published' })
-            .sort({ createdAt: -1 }).limit(limit).lean();
+        const products = await remember('products:new-arrivals:' + limit, PRODUCT_TTL, () =>
+            Product.find({ isNewArrival: true, status: 'published' })
+                .sort({ createdAt: -1 }).limit(limit).lean());
         res.json({ success: true, data: products });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -143,8 +165,9 @@ router.get('/new-arrivals', async (req, res) => {
 router.get('/best-sellers', async (req, res) => {
     try {
         const limit = Math.min(20, parseInt(req.query.limit) || 10);
-        const products = await Product.find({ isBestSeller: true, status: 'published' })
-            .sort({ totalSold: -1 }).limit(limit).lean();
+        const products = await remember('products:best-sellers:' + limit, PRODUCT_TTL, () =>
+            Product.find({ isBestSeller: true, status: 'published' })
+                .sort({ totalSold: -1 }).limit(limit).lean());
         res.json({ success: true, data: products });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -154,11 +177,12 @@ router.get('/best-sellers', async (req, res) => {
 // GET /api/products/flash-sale – active flash sales
 router.get('/flash-sale', async (req, res) => {
     try {
-        const products = await Product.find({
-            flashSale: true,
-            flashSaleEnd: { $gt: new Date() },
-            status: 'published'
-        }).sort({ flashSaleEnd: 1 }).lean();
+        const products = await remember('products:flash-sale', PRODUCT_TTL, () =>
+            Product.find({
+                flashSale: true,
+                flashSaleEnd: { $gt: new Date() },
+                status: 'published'
+            }).sort({ flashSaleEnd: 1 }).lean());
         res.json({ success: true, data: products });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -169,9 +193,10 @@ router.get('/flash-sale', async (req, res) => {
 router.get('/trending', async (req, res) => {
     try {
         const limit = Math.min(20, parseInt(req.query.limit) || 10);
-        const products = await Product.find({ status: 'published', soldOut: false })
-            .sort({ totalSold: -1, rating: -1, createdAt: -1 })
-            .limit(limit).lean();
+        const products = await remember('products:trending:' + limit, PRODUCT_TTL, () =>
+            Product.find({ status: 'published', soldOut: false })
+                .sort({ totalSold: -1, rating: -1, createdAt: -1 })
+                .limit(limit).lean());
         res.json({ success: true, data: products });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -202,10 +227,15 @@ router.get('/search', async (req, res) => {
         const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
         const skip = (pageNum - 1) * limitNum;
 
-        const [products, total] = await Promise.all([
-            Product.find(filter).sort({ rating: -1, totalSold: -1 }).skip(skip).limit(limitNum).lean(),
-            Product.countDocuments(filter)
-        ]);
+        const cacheKey = 'products:search:' + JSON.stringify({ q, page: pageNum, limit: limitNum });
+
+        const { products, total } = await remember(cacheKey, SEARCH_TTL, async () => {
+            const [products, total] = await Promise.all([
+                Product.find(filter).sort({ rating: -1, totalSold: -1 }).skip(skip).limit(limitNum).lean(),
+                Product.countDocuments(filter)
+            ]);
+            return { products, total };
+        });
 
         res.json({
             success: true,
@@ -225,25 +255,27 @@ router.get('/filter', async (req, res) => {
         if (category) match.category = category;
         if (gender) match.gender = gender;
 
-        const [priceRange, brands, categories, materials] = await Promise.all([
-            Product.aggregate([
-                { $match: match },
-                { $group: { _id: null, min: { $min: '$price' }, max: { $max: '$price' } } }
-            ]),
-            Product.distinct('brand', match),
-            Product.distinct('category', match),
-            Product.distinct('material', match)
-        ]);
+        const cacheKey = 'products:filter:' + JSON.stringify({ category: category || null, gender: gender || null });
 
-        res.json({
-            success: true,
-            data: {
+        const data = await remember(cacheKey, PRODUCT_TTL, async () => {
+            const [priceRange, brands, categories, materials] = await Promise.all([
+                Product.aggregate([
+                    { $match: match },
+                    { $group: { _id: null, min: { $min: '$price' }, max: { $max: '$price' } } }
+                ]),
+                Product.distinct('brand', match),
+                Product.distinct('category', match),
+                Product.distinct('material', match)
+            ]);
+            return {
                 priceRange: priceRange[0] || { min: 0, max: 0 },
                 brands: brands.filter(Boolean),
                 categories: categories.filter(Boolean),
                 materials: materials.filter(Boolean)
-            }
+            };
         });
+
+        res.json({ success: true, data });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
@@ -256,12 +288,13 @@ router.get('/recommended/:id', async (req, res) => {
         if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
 
         const limit = Math.min(10, parseInt(req.query.limit) || 6);
-        const products = await Product.find({
-            _id: { $ne: product._id },
-            category: product.category,
-            gender: product.gender,
-            status: 'published'
-        }).sort({ rating: -1, totalSold: -1 }).limit(limit).lean();
+        const products = await remember('products:recommended:' + req.params.id + ':' + limit, PRODUCT_TTL, () =>
+            Product.find({
+                _id: { $ne: product._id },
+                category: product.category,
+                gender: product.gender,
+                status: 'published'
+            }).sort({ rating: -1, totalSold: -1 }).limit(limit).lean());
 
         res.json({ success: true, data: products });
     } catch (err) {
@@ -272,23 +305,23 @@ router.get('/recommended/:id', async (req, res) => {
 // GET /api/products/related/:id – related products (from relatedProducts array, fallback to category)
 router.get('/related/:id', async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id).populate('relatedProducts');
-        if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-
-        let related = (product.relatedProducts || []).filter(p => p && p.status === 'published');
-
-        // Fallback: fill with same-category products if not enough
-        if (related.length < 6) {
-            const existingIds = [product._id, ...related.map(p => p._id)];
-            const more = await Product.find({
-                _id: { $nin: existingIds },
-                category: product.category,
-                status: 'published'
-            }).sort({ rating: -1 }).limit(6 - related.length).lean();
-            related = [...related, ...more];
-        }
-
-        res.json({ success: true, data: related.slice(0, 6) });
+        const products = await remember('products:related:' + req.params.id, PRODUCT_TTL, async () => {
+            const product = await Product.findById(req.params.id).populate('relatedProducts');
+            if (!product) return null;
+            let related = (product.relatedProducts || []).filter(p => p && p.status === 'published');
+            if (related.length < 6) {
+                const existingIds = [product._id, ...related.map(p => p._id)];
+                const more = await Product.find({
+                    _id: { $nin: existingIds },
+                    category: product.category,
+                    status: 'published'
+                }).sort({ rating: -1 }).limit(6 - related.length).lean();
+                related = [...related, ...more];
+            }
+            return related.slice(0, 6);
+        });
+        if (products === null) return res.status(404).json({ success: false, message: 'Product not found' });
+        res.json({ success: true, data: products });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
@@ -297,8 +330,11 @@ router.get('/related/:id', async (req, res) => {
 // GET /api/products/brands – list distinct brands
 router.get('/brands', async (req, res) => {
     try {
-        const brands = await Product.distinct('brand', { status: 'published', brand: { $ne: '' } });
-        res.json({ success: true, data: brands.sort() });
+        const brands = await remember('products:brands', PRODUCT_TTL, async () => {
+            const brands = await Product.distinct('brand', { status: 'published', brand: { $ne: '' } });
+            return brands.sort();
+        });
+        res.json({ success: true, data: brands });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
@@ -307,7 +343,8 @@ router.get('/brands', async (req, res) => {
 // GET /api/products/slug/:slug – get product by slug
 router.get('/slug/:slug', async (req, res) => {
     try {
-        const product = await Product.findOne({ slug: req.params.slug, status: 'published' });
+        const product = await remember('products:slug:' + req.params.slug, PRODUCT_TTL, () =>
+            Product.findOne({ slug: req.params.slug, status: 'published' }).lean());
         if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
         res.json({ success: true, data: product });
     } catch (err) {
@@ -320,7 +357,8 @@ router.get('/:id', async (req, res) => {
     try {
         const isAdmin = req.user && req.user.role === 'admin';
         const filter = isAdmin ? { _id: req.params.id } : { _id: req.params.id, status: 'published' };
-        const product = await Product.findOne(filter);
+        const product = await remember('products:byid:' + (isAdmin ? 'admin:' : 'public:') + req.params.id, PRODUCT_TTL, () =>
+            Product.findOne(filter).lean());
         if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
         res.json({ success: true, data: product });
     } catch (err) {
@@ -431,6 +469,7 @@ router.post('/', authenticateToken, requireAdmin, validate(schemas.product), asy
 
         const product = new Product(productData);
         await product.save();
+        clearProductCache();
         res.status(201).json({ success: true, data: product });
     } catch (err) {
         console.error('❌ POST /products error:', err);
@@ -457,6 +496,7 @@ router.put('/bulk/update', authenticateToken, requireAdmin, async (req, res) => 
         }
 
         const result = await Product.updateMany({ _id: { $in: ids } }, { $set: safeUpdates });
+        clearProductCache();
         res.json({ success: true, message: `${result.modifiedCount} products updated`, data: { modifiedCount: result.modifiedCount } });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -476,6 +516,7 @@ router.delete('/bulk/delete', authenticateToken, requireAdmin, async (req, res) 
             deleteCloudinaryImages(allImages);
         }
         const result = await Product.deleteMany({ _id: { $in: ids } });
+        clearProductCache();
         res.json({ success: true, message: `${result.deletedCount} products deleted`, data: { deletedCount: result.deletedCount } });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -508,6 +549,7 @@ router.put('/:id/stock', authenticateToken, requireAdmin, async (req, res) => {
         }
 
         const updated = await Product.findByIdAndUpdate(req.params.id, update, { new: true });
+        clearProductCache();
         res.json({ success: true, data: updated });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Internal server error' });
@@ -630,6 +672,7 @@ router.put('/:id', authenticateToken, requireAdmin, validate(schemas.product), a
 
         const product = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
         if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+        clearProductCache();
         res.json({ success: true, data: product });
     } catch (err) {
         console.error('❌ PUT /products/:id error:', err);
@@ -644,6 +687,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
         if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
         const allImages = [product.thumbnail, ...(product.images || []), ...(product.gallery || []), ...(product.images360 || [])].filter(Boolean);
         deleteCloudinaryImages(allImages);
+        clearProductCache();
         res.json({ success: true, message: 'Product deleted' });
     } catch (err) {
         console.error('❌ DELETE /products/:id error:', err);
@@ -683,6 +727,7 @@ router.post('/duplicate/:id', authenticateToken, requireAdmin, async (req, res) 
 
         const product = new Product(dup);
         await product.save();
+        clearProductCache();
         res.status(201).json({ success: true, data: product });
     } catch (err) {
         console.error('❌ POST /products/duplicate error:', err);
@@ -785,6 +830,7 @@ router.post('/import', authenticateToken, requireAdmin, async (req, res) => {
             }
         }
 
+        clearProductCache();
         res.json({
             success: true,
             data: results,

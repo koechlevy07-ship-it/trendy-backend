@@ -95,7 +95,7 @@ app.get('/api/ready', (req, res) => {
 console.log('[INFO] Connecting to MongoDB Atlas...');
 
 mongoose
-  .connect(process.env.MONGODB_URI)
+  .connect(process.env.MONGODB_URI, { maxPoolSize: 10 })
   .then(() => {
     console.log('[INFO] MongoDB Atlas connection established.');
     try {
