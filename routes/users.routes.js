@@ -669,6 +669,144 @@ router.post('/export', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // ============================================================
+// PAYMENT METHODS (customer wallet)
+// ============================================================
+
+// GET /api/users/payment-methods – list own saved payment methods
+router.get('/payment-methods', authenticateToken, async (req, res) => {
+    try {
+        const methods = await CustomerPaymentMethod.find({ user: req.user.id }).sort({ isDefault: -1, createdAt: -1 });
+        res.json({ success: true, data: methods });
+    } catch (err) { res.status(500).json({ success: false, message: 'Failed to load payment methods' }); }
+});
+
+// POST /api/users/payment-methods – save a new payment method
+router.post('/payment-methods', authenticateToken, async (req, res) => {
+    try {
+        const { type, nickname, details, isDefault } = req.body;
+        const validTypes = ['mpesa', 'visa', 'mastercard', 'paypal', 'bank_transfer'];
+        if (!type || !validTypes.includes(type)) return res.status(400).json({ success: false, message: 'Valid payment type required' });
+        if (!details || !details.trim()) return res.status(400).json({ success: false, message: 'Account number or details required' });
+
+        const count = await CustomerPaymentMethod.countDocuments({ user: req.user.id });
+        if (count >= 10) return res.status(400).json({ success: false, message: 'Maximum of 10 saved payment methods reached' });
+
+        if (isDefault) {
+            await CustomerPaymentMethod.updateMany({ user: req.user.id }, { isDefault: false });
+        }
+        const method = new CustomerPaymentMethod({
+            user: req.user.id,
+            type,
+            nickname: (nickname || '').trim(),
+            details: details.trim(),
+            isDefault: !!isDefault || count === 0
+        });
+        await method.save();
+        res.status(201).json({ success: true, data: method });
+    } catch (err) { res.status(500).json({ success: false, message: 'Failed to save payment method' }); }
+});
+
+// PUT /api/users/payment-methods/:id – update a saved payment method
+router.put('/payment-methods/:id', authenticateToken, async (req, res) => {
+    try {
+        const method = await CustomerPaymentMethod.findOne({ _id: req.params.id, user: req.user.id });
+        if (!method) return res.status(404).json({ success: false, message: 'Payment method not found' });
+
+        const { type, nickname, details, isDefault } = req.body;
+        const validTypes = ['mpesa', 'visa', 'mastercard', 'paypal', 'bank_transfer'];
+        if (type && !validTypes.includes(type)) return res.status(400).json({ success: false, message: 'Valid payment type required' });
+        if (details !== undefined && (!details || !details.trim())) return res.status(400).json({ success: false, message: 'Account number or details required' });
+
+        if (type) method.type = type;
+        if (nickname !== undefined) method.nickname = nickname.trim();
+        if (details !== undefined) method.details = details.trim();
+        if (isDefault === true) {
+            await CustomerPaymentMethod.updateMany({ user: req.user.id, _id: { $ne: method._id } }, { isDefault: false });
+            method.isDefault = true;
+        }
+        await method.save();
+        res.json({ success: true, data: method });
+    } catch (err) { res.status(500).json({ success: false, message: 'Failed to update payment method' }); }
+});
+
+// DELETE /api/users/payment-methods/:id – remove a saved payment method
+router.delete('/payment-methods/:id', authenticateToken, async (req, res) => {
+    try {
+        const method = await CustomerPaymentMethod.findOne({ _id: req.params.id, user: req.user.id });
+        if (!method) return res.status(404).json({ success: false, message: 'Payment method not found' });
+        await method.deleteOne();
+        if (method.isDefault) {
+            const next = await CustomerPaymentMethod.findOne({ user: req.user.id }).sort({ createdAt: 1 });
+            if (next) { next.isDefault = true; await next.save(); }
+        }
+        res.json({ success: true, message: 'Payment method removed' });
+    } catch (err) { res.status(500).json({ success: false, message: 'Failed to remove payment method' }); }
+});
+
+// PUT /api/users/payment-methods/:id/default – set default payment method
+router.put('/payment-methods/:id/default', authenticateToken, async (req, res) => {
+    try {
+        const method = await CustomerPaymentMethod.findOne({ _id: req.params.id, user: req.user.id });
+        if (!method) return res.status(404).json({ success: false, message: 'Payment method not found' });
+        await CustomerPaymentMethod.updateMany({ user: req.user.id, _id: { $ne: method._id } }, { isDefault: false });
+        method.isDefault = true;
+        await method.save();
+        res.json({ success: true, data: method });
+    } catch (err) { res.status(500).json({ success: false, message: 'Failed to set default payment method' }); }
+});
+
+// ============================================================
+// COUPONS (customer)
+// ============================================================
+
+// GET /api/users/coupons?status=available|used|expired – list coupons for the logged-in user
+router.get('/coupons', authenticateToken, async (req, res) => {
+    try {
+        const { status } = req.query;
+        const now = new Date();
+        const match = { status: { $in: ['active', 'scheduled'] } };
+
+        const coupons = await Coupon.find(match).lean();
+        const mapped = coupons
+            .filter(c => {
+                if (c.customerEligibility === 'specific') {
+                    if (!Array.isArray(c.eligibleCustomers)) return false;
+                    return c.eligibleCustomers.some(id => String(id) === String(req.user.id));
+                }
+                if (c.customerEligibility === 'new') return false;
+                return true;
+            })
+            .map(c => {
+                const usage = (c.usedBy || []).find(u => u.customer && String(u.customer) === String(req.user.id));
+                const isUsed = !!(c.oneTimeUse && usage);
+                const expiryDate = c.endDate || null;
+                const isExpired = expiryDate && new Date(expiryDate) < now;
+                return {
+                    _id: c._id,
+                    code: c.code,
+                    name: c.name,
+                    description: c.description,
+                    discountType: c.discountType,
+                    discountValue: c.discountValue,
+                    minOrder: c.minCartValue || 0,
+                    expiryDate,
+                    isUsed,
+                    usageLimit: c.usageLimit || 0,
+                    usedCount: usage ? usage.count : 0,
+                    status: c.status
+                };
+            })
+            .filter(c => {
+                if (status === 'used') return c.isUsed;
+                if (status === 'expired') return c.isExpired && !c.isUsed;
+                return !c.isUsed && !c.isExpired;
+            });
+
+        res.json({ success: true, data: mapped });
+    } catch (err) { res.status(500).json({ success: false, message: 'Failed to load coupons' }); }
+});
+
+// ============================================================
 // PARAMETER-BASED ADMIN ENDPOINTS
 // ============================================================
 
@@ -817,144 +955,6 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
         await user.save();
         res.json({ success: true, message: 'Customer deactivated' });
     } catch (err) { res.status(500).json({ success: false, message: 'Failed to deactivate user' }); }
-});
-
-// ============================================================
-// PAYMENT METHODS (customer wallet)
-// ============================================================
-
-// GET /api/users/payment-methods – list own saved payment methods
-router.get('/payment-methods', authenticateToken, async (req, res) => {
-    try {
-        const methods = await CustomerPaymentMethod.find({ user: req.user.id }).sort({ isDefault: -1, createdAt: -1 });
-        res.json({ success: true, data: methods });
-    } catch (err) { res.status(500).json({ success: false, message: 'Failed to load payment methods' }); }
-});
-
-// POST /api/users/payment-methods – save a new payment method
-router.post('/payment-methods', authenticateToken, async (req, res) => {
-    try {
-        const { type, nickname, details, isDefault } = req.body;
-        const validTypes = ['mpesa', 'visa', 'mastercard', 'paypal', 'bank_transfer'];
-        if (!type || !validTypes.includes(type)) return res.status(400).json({ success: false, message: 'Valid payment type required' });
-        if (!details || !details.trim()) return res.status(400).json({ success: false, message: 'Account number or details required' });
-
-        const count = await CustomerPaymentMethod.countDocuments({ user: req.user.id });
-        if (count >= 10) return res.status(400).json({ success: false, message: 'Maximum of 10 saved payment methods reached' });
-
-        if (isDefault) {
-            await CustomerPaymentMethod.updateMany({ user: req.user.id }, { isDefault: false });
-        }
-        const method = new CustomerPaymentMethod({
-            user: req.user.id,
-            type,
-            nickname: (nickname || '').trim(),
-            details: details.trim(),
-            isDefault: !!isDefault || count === 0
-        });
-        await method.save();
-        res.status(201).json({ success: true, data: method });
-    } catch (err) { res.status(500).json({ success: false, message: 'Failed to save payment method' }); }
-});
-
-// PUT /api/users/payment-methods/:id – update a saved payment method
-router.put('/payment-methods/:id', authenticateToken, async (req, res) => {
-    try {
-        const method = await CustomerPaymentMethod.findOne({ _id: req.params.id, user: req.user.id });
-        if (!method) return res.status(404).json({ success: false, message: 'Payment method not found' });
-
-        const { type, nickname, details, isDefault } = req.body;
-        const validTypes = ['mpesa', 'visa', 'mastercard', 'paypal', 'bank_transfer'];
-        if (type && !validTypes.includes(type)) return res.status(400).json({ success: false, message: 'Valid payment type required' });
-        if (details !== undefined && (!details || !details.trim())) return res.status(400).json({ success: false, message: 'Account number or details required' });
-
-        if (type) method.type = type;
-        if (nickname !== undefined) method.nickname = nickname.trim();
-        if (details !== undefined) method.details = details.trim();
-        if (isDefault === true) {
-            await CustomerPaymentMethod.updateMany({ user: req.user.id, _id: { $ne: method._id } }, { isDefault: false });
-            method.isDefault = true;
-        }
-        await method.save();
-        res.json({ success: true, data: method });
-    } catch (err) { res.status(500).json({ success: false, message: 'Failed to update payment method' }); }
-});
-
-// DELETE /api/users/payment-methods/:id – remove a saved payment method
-router.delete('/payment-methods/:id', authenticateToken, async (req, res) => {
-    try {
-        const method = await CustomerPaymentMethod.findOne({ _id: req.params.id, user: req.user.id });
-        if (!method) return res.status(404).json({ success: false, message: 'Payment method not found' });
-        await method.deleteOne();
-        if (method.isDefault) {
-            const next = await CustomerPaymentMethod.findOne({ user: req.user.id }).sort({ createdAt: 1 });
-            if (next) { next.isDefault = true; await next.save(); }
-        }
-        res.json({ success: true, message: 'Payment method removed' });
-    } catch (err) { res.status(500).json({ success: false, message: 'Failed to remove payment method' }); }
-});
-
-// PUT /api/users/payment-methods/:id/default – set default payment method
-router.put('/payment-methods/:id/default', authenticateToken, async (req, res) => {
-    try {
-        const method = await CustomerPaymentMethod.findOne({ _id: req.params.id, user: req.user.id });
-        if (!method) return res.status(404).json({ success: false, message: 'Payment method not found' });
-        await CustomerPaymentMethod.updateMany({ user: req.user.id, _id: { $ne: method._id } }, { isDefault: false });
-        method.isDefault = true;
-        await method.save();
-        res.json({ success: true, data: method });
-    } catch (err) { res.status(500).json({ success: false, message: 'Failed to set default payment method' }); }
-});
-
-// ============================================================
-// COUPONS (customer)
-// ============================================================
-
-// GET /api/users/coupons?status=available|used|expired – list coupons for the logged-in user
-router.get('/coupons', authenticateToken, async (req, res) => {
-    try {
-        const { status } = req.query;
-        const now = new Date();
-        const match = { status: { $in: ['active', 'scheduled'] } };
-
-        const coupons = await Coupon.find(match).lean();
-        const mapped = coupons
-            .filter(c => {
-                if (c.customerEligibility === 'specific') {
-                    if (!Array.isArray(c.eligibleCustomers)) return false;
-                    return c.eligibleCustomers.some(id => String(id) === String(req.user.id));
-                }
-                if (c.customerEligibility === 'new') return false;
-                return true;
-            })
-            .map(c => {
-                const usage = (c.usedBy || []).find(u => u.customer && String(u.customer) === String(req.user.id));
-                const isUsed = !!(c.oneTimeUse && usage);
-                const expiryDate = c.endDate || null;
-                const isExpired = expiryDate && new Date(expiryDate) < now;
-                return {
-                    _id: c._id,
-                    code: c.code,
-                    name: c.name,
-                    description: c.description,
-                    discountType: c.discountType,
-                    discountValue: c.discountValue,
-                    minOrder: c.minCartValue || 0,
-                    expiryDate,
-                    isUsed,
-                    usageLimit: c.usageLimit || 0,
-                    usedCount: usage ? usage.count : 0,
-                    status: c.status
-                };
-            })
-            .filter(c => {
-                if (status === 'used') return c.isUsed;
-                if (status === 'expired') return c.isExpired && !c.isUsed;
-                return !c.isUsed && !c.isExpired;
-            });
-
-        res.json({ success: true, data: mapped });
-    } catch (err) { res.status(500).json({ success: false, message: 'Failed to load coupons' }); }
 });
 
 module.exports = router;
