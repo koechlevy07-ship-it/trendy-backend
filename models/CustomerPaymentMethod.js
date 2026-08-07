@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const paymentMethodSchema = new mongoose.Schema({
+const customerPaymentMethodSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     type: {
         type: String,
@@ -12,4 +12,4 @@ const paymentMethodSchema = new mongoose.Schema({
     isDefault: { type: Boolean, default: false }
 }, { timestamps: true });
 
-module.exports = mongoose.model('PaymentMethod', paymentMethodSchema);
+module.exports = mongoose.model('CustomerPaymentMethod', customerPaymentMethodSchema);

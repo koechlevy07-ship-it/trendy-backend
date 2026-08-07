@@ -8,7 +8,7 @@ const Review = require('../models/Review');
 const Cart = require('../models/Cart');
 const Wishlist = require('../models/Wishlist');
 const Notification = require('../models/Notification');
-const PaymentMethod = require('../models/PaymentMethod');
+const CustomerPaymentMethod = require('../models/CustomerPaymentMethod');
 const Coupon = require('../models/Coupon');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
@@ -826,7 +826,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
 // GET /api/users/payment-methods – list own saved payment methods
 router.get('/payment-methods', authenticateToken, async (req, res) => {
     try {
-        const methods = await PaymentMethod.find({ user: req.user.id }).sort({ isDefault: -1, createdAt: -1 });
+        const methods = await CustomerPaymentMethod.find({ user: req.user.id }).sort({ isDefault: -1, createdAt: -1 });
         res.json({ success: true, data: methods });
     } catch (err) { res.status(500).json({ success: false, message: 'Failed to load payment methods' }); }
 });
@@ -839,13 +839,13 @@ router.post('/payment-methods', authenticateToken, async (req, res) => {
         if (!type || !validTypes.includes(type)) return res.status(400).json({ success: false, message: 'Valid payment type required' });
         if (!details || !details.trim()) return res.status(400).json({ success: false, message: 'Account number or details required' });
 
-        const count = await PaymentMethod.countDocuments({ user: req.user.id });
+        const count = await CustomerPaymentMethod.countDocuments({ user: req.user.id });
         if (count >= 10) return res.status(400).json({ success: false, message: 'Maximum of 10 saved payment methods reached' });
 
         if (isDefault) {
-            await PaymentMethod.updateMany({ user: req.user.id }, { isDefault: false });
+            await CustomerPaymentMethod.updateMany({ user: req.user.id }, { isDefault: false });
         }
-        const method = new PaymentMethod({
+        const method = new CustomerPaymentMethod({
             user: req.user.id,
             type,
             nickname: (nickname || '').trim(),
@@ -860,7 +860,7 @@ router.post('/payment-methods', authenticateToken, async (req, res) => {
 // PUT /api/users/payment-methods/:id – update a saved payment method
 router.put('/payment-methods/:id', authenticateToken, async (req, res) => {
     try {
-        const method = await PaymentMethod.findOne({ _id: req.params.id, user: req.user.id });
+        const method = await CustomerPaymentMethod.findOne({ _id: req.params.id, user: req.user.id });
         if (!method) return res.status(404).json({ success: false, message: 'Payment method not found' });
 
         const { type, nickname, details, isDefault } = req.body;
@@ -872,7 +872,7 @@ router.put('/payment-methods/:id', authenticateToken, async (req, res) => {
         if (nickname !== undefined) method.nickname = nickname.trim();
         if (details !== undefined) method.details = details.trim();
         if (isDefault === true) {
-            await PaymentMethod.updateMany({ user: req.user.id, _id: { $ne: method._id } }, { isDefault: false });
+            await CustomerPaymentMethod.updateMany({ user: req.user.id, _id: { $ne: method._id } }, { isDefault: false });
             method.isDefault = true;
         }
         await method.save();
@@ -883,11 +883,11 @@ router.put('/payment-methods/:id', authenticateToken, async (req, res) => {
 // DELETE /api/users/payment-methods/:id – remove a saved payment method
 router.delete('/payment-methods/:id', authenticateToken, async (req, res) => {
     try {
-        const method = await PaymentMethod.findOne({ _id: req.params.id, user: req.user.id });
+        const method = await CustomerPaymentMethod.findOne({ _id: req.params.id, user: req.user.id });
         if (!method) return res.status(404).json({ success: false, message: 'Payment method not found' });
         await method.deleteOne();
         if (method.isDefault) {
-            const next = await PaymentMethod.findOne({ user: req.user.id }).sort({ createdAt: 1 });
+            const next = await CustomerPaymentMethod.findOne({ user: req.user.id }).sort({ createdAt: 1 });
             if (next) { next.isDefault = true; await next.save(); }
         }
         res.json({ success: true, message: 'Payment method removed' });
@@ -897,9 +897,9 @@ router.delete('/payment-methods/:id', authenticateToken, async (req, res) => {
 // PUT /api/users/payment-methods/:id/default – set default payment method
 router.put('/payment-methods/:id/default', authenticateToken, async (req, res) => {
     try {
-        const method = await PaymentMethod.findOne({ _id: req.params.id, user: req.user.id });
+        const method = await CustomerPaymentMethod.findOne({ _id: req.params.id, user: req.user.id });
         if (!method) return res.status(404).json({ success: false, message: 'Payment method not found' });
-        await PaymentMethod.updateMany({ user: req.user.id, _id: { $ne: method._id } }, { isDefault: false });
+        await CustomerPaymentMethod.updateMany({ user: req.user.id, _id: { $ne: method._id } }, { isDefault: false });
         method.isDefault = true;
         await method.save();
         res.json({ success: true, data: method });
