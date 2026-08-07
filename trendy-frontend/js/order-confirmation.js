@@ -2,27 +2,11 @@
 // ORDER CONFIRMATION PAGE — Trendy Wardrobe
 // ============================================================
 
-const API_URL = 'https://trendy-backend-jq27.onrender.com/api';
-
 function $(id) { return document.getElementById(id); }
 
 function escHtml(str) {
     if (str == null) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-
-function getImageUrl(path, width) {
-    if (!path) return '';
-    let url = path.startsWith('http') ? path : path;
-    if (url.includes('res.cloudinary.com') && !url.includes('/upload/')) return url;
-    if (url.includes('res.cloudinary.com')) {
-        const parts = url.split('/upload/');
-        if (parts.length === 2) {
-            const w = width || 200;
-            url = parts[0] + '/upload/f_webp,q_auto,w_' + w + '/' + parts[1];
-        }
-    }
-    return url;
 }
 
 function getToken() { return localStorage.getItem('token'); }
@@ -116,9 +100,11 @@ function renderOrder(order) {
 
     // Status
     const status = order.status || 'pending';
-    const statusBadge = $('confStatusDetail').querySelector('.conf-status-badge');
-    statusBadge.className = `conf-status-badge ${status}`;
-    statusBadge.textContent = status.replace(/-/g, ' ');
+    const statusBadge = $('confStatusDetail')?.querySelector('.conf-status-badge');
+    if (statusBadge) {
+        statusBadge.className = `conf-status-badge ${status}`;
+        statusBadge.textContent = status.replace(/-/g, ' ');
+    }
 
     const statusMsg = {
         'pending': 'Your order has been placed and is awaiting confirmation.',
@@ -196,7 +182,7 @@ function renderOrder(order) {
         'card-payment': 'Card Payment', 'paypal': 'PayPal', 'stripe': 'Stripe',
         'bank-transfer': 'Bank Transfer'
     };
-    $('confPayment').innerHTML = `<strong>${paymentLabels[order.paymentMethod] || order.paymentMethod || 'Cash on Delivery'}</strong>`;
+    $('confPayment').innerHTML = `<strong>${escHtml(paymentLabels[order.paymentMethod] || order.paymentMethod || 'Cash on Delivery')}</strong>`;
 
     // Timeline
     const timeline = order.timeline || [];

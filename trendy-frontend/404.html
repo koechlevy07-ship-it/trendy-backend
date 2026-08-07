@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://cdn.vercel-insights.com https://vercel.live https://maps.googleapis.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: https://res.cloudinary.com https://placehold.co blob: https://maps.googleapis.com https://maps.gstatic.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com; connect-src 'self' https://trendy-backend-jq27.onrender.com https://api.cloudinary.com https://cdn.vercel-insights.com https://vercel.live https://maps.googleapis.com https://www.google-analytics.com https://www.google.com; frame-src https://www.google.com https://www.google.com/maps https://vercel.live; worker-src 'self';" />
     <title>404 - Page Not Found | Trendy Wardrobe</title>
     <meta name="description" content="Page not found - Trendy Wardrobe luxury fashion store. Browse our collection of premium trench coats, wardrobe essentials, and shoes." />
     <meta name="robots" content="noindex, nofollow" />
-    <meta http-equiv="refresh" content="15;url=/" />
     <meta property="og:title" content="404 - Page Not Found | Trendy Wardrobe" />
     <meta property="og:description" content="The page you're looking for doesn't exist." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://trendy-frontend-ashen.vercel.app/404.html" />
     <meta property="og:site_name" content="Trendy Wardrobe" />
-    <meta property="og:image" content="https://trendy-frontend-ashen.vercel.app/favicon.svg" />
+    <meta property="og:image" content="https://trendy-frontend-ashen.vercel.app/assets/images/og-image.png" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="404 — Page Not Found | Trendy Wardrobe" />
     <meta name="twitter:description" content="The page you're looking for doesn't exist." />
-    <meta name="twitter:image" content="https://trendy-frontend-ashen.vercel.app/favicon.svg" />
+    <meta name="twitter:image" content="https://trendy-frontend-ashen.vercel.app/assets/images/og-image.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
@@ -25,7 +25,10 @@
     <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-ZYYHCQ4HZX',{cookie_flags:'SameSite=None;Secure'});</script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Great+Vibes&family=Oswald:wght@400;700&family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://trendy-backend-jq27.onrender.com" crossorigin />
+    <link rel="dns-prefetch" href="https://trendy-backend-jq27.onrender.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Great+Vibes&family=Oswald:wght@400;700&family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Great+Vibes&family=Oswald:wght@400;700&family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" /></noscript>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <style>
         :root {
@@ -265,6 +268,9 @@
         </div>
     </footer>
 
+    <!-- WhatsApp Floating Button -->
+    <a href="https://wa.me/254728985417" target="_blank" class="floating-whatsapp hidden-wa" id="floatingWhatsApp" aria-label="Chat on WhatsApp"><i class="fab fa-whatsapp"></i></a>
+
     <script>
         window.addEventListener('scroll', function() {
             var h = document.getElementById('stickyHeader');
@@ -272,6 +278,14 @@
                 if (window.scrollY > 60) h.classList.add('shrink');
                 else h.classList.remove('shrink');
             }
+            var wa = document.getElementById('floatingWhatsApp');
+            if (wa) wa.classList.toggle('hidden-wa', window.scrollY < 200);
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var wa = document.getElementById('floatingWhatsApp');
+                if (wa) wa.classList.remove('hidden-wa');
+            }, 800);
         });
     </script>
 </body>
