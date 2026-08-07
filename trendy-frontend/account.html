@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://cdn.vercel-insights.com https://vercel.live https://maps.googleapis.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: https://res.cloudinary.com https://placehold.co blob: https://maps.googleapis.com https://maps.gstatic.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com; connect-src 'self' https://trendy-backend-jq27.onrender.com https://api.cloudinary.com https://cdn.vercel-insights.com https://vercel.live https://maps.googleapis.com https://www.google-analytics.com https://www.google.com; frame-src https://www.google.com https://www.google.com/maps https://vercel.live; worker-src 'self';" />
     <title>My Account — Trendy Wardrobe | Luxury Fashion</title>
     <meta name="description" content="Manage your Trendy Wardrobe account, orders, wishlist, addresses, and profile." />
     <meta name="robots" content="index, follow" />
@@ -16,7 +17,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Great+Vibes&family=Oswald:wght@400;700&family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://trendy-backend-jq27.onrender.com" crossorigin />
+    <link rel="dns-prefetch" href="https://trendy-backend-jq27.onrender.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Great+Vibes&family=Oswald:wght@400;700&family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Great+Vibes&family=Oswald:wght@400;700&family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" /></noscript>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="/css/styles.css?v=41" />
     <link rel="stylesheet" href="/css/account.css" />
@@ -209,6 +213,7 @@
                         <button class="acc-nav-item" data-section="tickets"><i class="fas fa-ticket-alt"></i> My Tickets</button>
                         <button class="acc-nav-item" data-section="reviews"><i class="fas fa-star"></i> Reviews</button>
                         <button class="acc-nav-item" data-section="notifications"><i class="fas fa-bell"></i> Notifications <span class="acc-nav-badge" id="accNotifBadge" style="display:none;">0</span></button>
+                        <button class="acc-nav-item" data-section="security"><i class="fas fa-shield-alt"></i> Security</button>
                         <button class="acc-nav-item" data-section="payment"><i class="fas fa-credit-card"></i> Payment Methods</button>
                         <button class="acc-nav-item" data-section="loyalty"><i class="fas fa-crown"></i> Loyalty & Rewards</button>
                         <button class="acc-nav-item" data-section="coupons"><i class="fas fa-ticket-alt"></i> Coupons & Vouchers</button>
@@ -491,6 +496,18 @@
                                 <p class="acc-text-muted">No points activity yet.</p>
                             </div>
                         </div>
+                        <div class="acc-loyalty-history" style="margin-top:24px;">
+                            <h3>Available Rewards</h3>
+                            <div id="accAvailableRewards" class="acc-rewards-list"></div>
+                        </div>
+                        <div class="acc-loyalty-history" style="margin-top:24px;">
+                            <h3>Referrals</h3>
+                            <div id="accReferrals" class="acc-referrals-list"></div>
+                        </div>
+                        <div class="acc-loyalty-history" style="margin-top:24px;">
+                            <h3>Achievements</h3>
+                            <div id="accAchievements" class="acc-achievements-list"></div>
+                        </div>
                     </section>
 
                     <!-- ===== COUPONS & VOUCHERS ===== -->
@@ -501,7 +518,7 @@
                             <button class="acc-coupon-tab" data-coupon-tab="used">Used</button>
                             <button class="acc-coupon-tab" data-coupon-tab="expired">Expired</button>
                         </div>
-                        <div id="acList" class="acc-coupon-list">
+                        <div id="acCouponList" class="acc-coupon-list">
                             <div class="acc-loading" style="text-align:center;padding:40px;"><div class="acc-loading-spinner"><i class="fas fa-spinner fa-spin"></i></div><p>Loading coupons...</p></div>
                         </div>
                     </section>
@@ -512,7 +529,7 @@
                         <div class="acc-settings-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;">
                             <div class="acc-settings-card">
                                 <h3><i class="fas fa-bell"></i> Notification Preferences</h3>
-                                <div id="anPrefs" class="acc-prefs-grid"></div>
+                                <div id="anPrefsSettings" class="acc-prefs-grid"></div>
                             </div>
                             <div class="acc-settings-card">
                                 <h3><i class="fas fa-palette"></i> Display Preferences</h3>
@@ -610,6 +627,8 @@
     <button class="back-to-top" id="backToTop"><i class="fas fa-arrow-up"></i></button>
     <div class="toast" id="toast"><span id="toastMessage">Saved!</span><span class="toast-close" id="toastClose">&times;</span></div>
 
+    <script src="/js/image-utils.js?v=41"></script>
+    <script src="/js/app.js?v=41"></script>
     <script src="/js/account.js"></script>
 </body>
 </html>

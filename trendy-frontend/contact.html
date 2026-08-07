@@ -5,21 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <title>Contact Us | Trendy Wardrobe — WhatsApp, Email & Location</title>
     <meta name="description" content="Get in touch with Trendy Wardrobe. WhatsApp +254 728 985 417, email markelpalace@gmail.com. Visit our store in Westlands, Nairobi. 24/7 customer support." />
-    <meta name="keywords" content="contact Trendy Wardrobe, WhatsApp Nairobi fashion, fashion store contact Kenya, Westlands fashion store" />
     <meta name="author" content="Trendy Wardrobe" />
     <meta name="robots" content="index, follow" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://cdn.vercel-insights.com https://vercel.live https://maps.googleapis.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: https://res.cloudinary.com https://placehold.co blob: https://maps.googleapis.com https://maps.gstatic.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com; connect-src 'self' https://trendy-backend-jq27.onrender.com https://api.cloudinary.com https://cdn.vercel-insights.com https://vercel.live https://maps.googleapis.com https://www.google-analytics.com https://www.google.com; frame-src https://www.google.com https://www.google.com/maps https://vercel.live; worker-src 'self';" />
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
     <meta property="og:title" content="Contact Us | Trendy Wardrobe — Get in Touch" />
     <meta property="og:description" content="Get in touch with Trendy Wardrobe. WhatsApp, email, or visit us in Westlands, Nairobi." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://trendy-frontend-ashen.vercel.app/contact.html" />
     <meta property="og:site_name" content="Trendy Wardrobe" />
-    <meta property="og:image" content="https://trendy-frontend-ashen.vercel.app/assets/images/logo-icon.svg" />
+    <meta property="og:image" content="https://trendy-frontend-ashen.vercel.app/assets/images/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Contact Us | Trendy Wardrobe" />
     <meta name="twitter:description" content="Get in touch with Trendy Wardrobe." />
-    <meta name="twitter:image" content="https://trendy-frontend-ashen.vercel.app/assets/images/logo-icon.svg" />
+    <meta name="twitter:image" content="https://trendy-frontend-ashen.vercel.app/assets/images/og-image.png" />
     <link rel="canonical" href="https://trendy-frontend-ashen.vercel.app/contact.html" />
     <link rel="icon" type="image/svg+xml" href="/assets/images/logo-icon.svg" />
     <link rel="apple-touch-icon" href="/assets/images/logo-icon.svg" />
@@ -51,7 +51,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Great+Vibes&family=Oswald:wght@400;700&family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://trendy-backend-jq27.onrender.com" crossorigin />
+    <link rel="dns-prefetch" href="https://trendy-backend-jq27.onrender.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Great+Vibes&family=Oswald:wght@400;700&family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Great+Vibes&family=Oswald:wght@400;700&family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" /></noscript>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="/css/styles.css?v=41" />
 <style>
@@ -168,12 +171,12 @@ STICKY HEADER
             <span class="drawer-toggle" data-target="drawerShoes">Trendy Shoes <span class="arrow"><i class="fas fa-chevron-down"></i></span></span>
             <div class="drawer-sub" id="drawerShoes"><a href="#">Sneakers</a><a href="#">Boots</a><a href="#">Sandals</a><a href="#">Running Shoes</a><a href="#">Formal Shoes</a><a href="#">Sports Shoes</a><a href="#">New Arrivals</a></div>
         </div>
-        <a href="/" data-page="wishlist" id="drawerWishlist"><i class="far fa-heart" style="margin-right:10px;"></i>Wishlist</a>
-        <a href="/" data-page="orders" id="drawerOrders"><i class="fas fa-box" style="margin-right:10px;"></i>My Orders</a>
+        <a href="#" data-page="wishlist" id="drawerWishlist"><i class="far fa-heart" style="margin-right:10px;"></i>Wishlist</a>
+        <a href="#" data-page="orders" id="drawerOrders"><i class="fas fa-box" style="margin-right:10px;"></i>My Orders</a>
         <a href="/contact.html" id="drawerContact">Contact Us</a>
         <a href="/about.html">About Us</a>
-        <a href="/" data-page="settings" id="drawerSettings"><i class="fas fa-cog" style="margin-right:10px;"></i>Settings</a>
-        <a href="/" id="drawerLogout"><i class="fas fa-sign-out-alt" style="margin-right:10px;color:#D81B60;"></i>Log Out</a>
+        <a href="#" data-page="settings" id="drawerSettings"><i class="fas fa-cog" style="margin-right:10px;"></i>Settings</a>
+        <a href="#" id="drawerLogout"><i class="fas fa-sign-out-alt" style="margin-right:10px;color:#D81B60;"></i>Log Out</a>
     </nav>
     <div class="drawer-footer">
         <div class="social-icons" id="drawerSocialLinks"></div>
@@ -305,6 +308,7 @@ CONTACT PAGE MAIN CONTENT
             <!-- Form Side -->
             <div class="contact-form-wrap">
                 <h3>Send Us a Message</h3>
+                <div id="ticketContext" style="display:none;background:var(--bg-primary);border:1px solid var(--border-light);border-left:4px solid var(--color-gold);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:0.85rem;color:var(--text-primary);"></div>
                 <form class="contact-form" id="contactForm">
                     <div class="contact-form-row">
                         <input type="text" id="contactName" placeholder="Your Name" required />
@@ -372,7 +376,7 @@ CONTACT PAGE MAIN CONTENT
                 <h2 style="font-size:clamp(1.5rem,2.8vw,2.2rem);font-weight:700;margin-top:8px;">Help Center</h2>
                 <p style="font-size:15px;color:var(--text-secondary);margin-top:12px;max-width:600px;margin-left:auto;margin-right:auto;">Quick answers to common questions. Can't find what you're looking for? <a href="#contactForm" style="color:var(--color-gold);">Contact us</a>.</p>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:24px;">
                 <div class="faq-item" style="background:#fff;padding:24px;border-radius:12px;border:1px solid var(--border-light);">
                     <h4 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-primary);">How do I track my order?</h4>
                     <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.6;">Once your order ships, you'll receive an email with a tracking number. You can also log into your account and visit <strong>My Orders</strong> to see real-time tracking updates.</p>
@@ -449,6 +453,7 @@ FOOTER
 <!-- TOAST -->
 <div class="toast" id="toast"><span id="toastMessage">Message sent!</span><span class="toast-close" id="toastClose">&times;</span></div>
 
+<script src="/js/image-utils.js?v=41"></script>
 <script src="/js/app.js?v=41"></script>
 <script>
 (function() {
@@ -457,6 +462,20 @@ FOOTER
     var ticketSuccess = document.getElementById('ticketSuccess');
     var ticketNumberEl = document.getElementById('ticketNumber');
     if (!contactForm) return;
+
+    function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    var params = new URLSearchParams(window.location.search);
+    var ticketRef = params.get('ticket') || params.get('reply');
+    var contextEl = document.getElementById('ticketContext');
+    if (ticketRef && contextEl) {
+        contextEl.style.display = 'block';
+        var isReply = !!params.get('reply');
+        contextEl.innerHTML = '<i class="fas fa-ticket-alt" style="margin-right:8px;color:var(--color-gold);"></i>' + (isReply ? 'Replying to ticket <strong>' + esc(ticketRef) + '</strong>. Mention your ticket number in the message below.' : 'Following up on ticket <strong>' + esc(ticketRef) + '</strong>. Mention your ticket number in the message below.');
+        var subjectSel = document.getElementById('contactSubject');
+        if (subjectSel) subjectSel.value = 'General Inquiry';
+        var msgEl = document.getElementById('contactMessage');
+        if (msgEl && !msgEl.value) msgEl.placeholder = 'Regarding my ticket ' + ticketRef + ' ...';
+    }
     contactForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         var name = document.getElementById('contactName').value.trim();
@@ -517,5 +536,26 @@ FOOTER
     if (toastClose) toastClose.addEventListener('click', function() { document.getElementById('toast').classList.remove('show'); });
 })();
 </script>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-bottom-nav" id="mobileBottomNav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border-light);z-index:9999;padding:6px 0 env(safe-area-inset-bottom, 6px);box-shadow:0 -2px 8px rgba(0,0,0,0.08);" aria-label="Mobile navigation">
+    <div style="display:flex;justify-content:space-evenly;align-items:center;width:100%;">
+        <button data-nav="home" onclick="window.location.href='/'" aria-label="Home" style="position:relative;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:8px 0;color:var(--text-secondary);font-size:0.65rem;flex:1;min-height:44px;">
+            <i class="fas fa-home" style="font-size:1.15rem;"></i><span>Home</span>
+        </button>
+        <button data-nav="search" aria-label="Search" onclick="window.location.href='/'" style="position:relative;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:8px 0;color:var(--text-secondary);font-size:0.65rem;flex:1;min-height:44px;">
+            <i class="fas fa-search" style="font-size:1.15rem;"></i><span>Search</span>
+        </button>
+        <button data-nav="wishlist" onclick="toggleAuthRequiredAction('wishlist')" aria-label="Wishlist" style="position:relative;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:8px 0;color:var(--text-secondary);font-size:0.65rem;flex:1;min-height:44px;">
+            <i class="fas fa-heart" style="font-size:1.15rem;"></i><span>Wishlist</span>
+        </button>
+        <button data-nav="cart" onclick="openCartModal()" aria-label="Cart" style="position:relative;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:8px 0;color:var(--text-secondary);font-size:0.65rem;flex:1;min-height:44px;">
+            <i class="fas fa-shopping-bag" style="font-size:1.15rem;"></i><span>Cart</span>
+        </button>
+        <button data-nav="account" onclick="toggleAuthRequiredAction('profile')" aria-label="Account" style="position:relative;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:8px 0;color:var(--text-secondary);font-size:0.65rem;flex:1;min-height:44px;">
+            <i class="fas fa-user" style="font-size:1.15rem;"></i><span>Account</span>
+        </button>
+    </div>
+</nav>
 </body>
 </html>

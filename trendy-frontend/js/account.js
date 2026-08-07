@@ -2,8 +2,6 @@
 // ACCOUNT PAGE — Trendy Wardrobe
 // ============================================================
 
-const API_URL = 'https://trendy-backend-jq27.onrender.com/api';
-
 // ---- Helpers ----
 const $ = id => document.getElementById(id);
 function escHtml(s) { return s == null ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -35,11 +33,11 @@ document.addEventListener('DOMContentLoaded', () => $('toastClose')?.addEventLis
 let profileData = null;
 let addresses = [];
 let orders = [];
-let wishlistItems = [];
+let accountWishlistItems = [];
 let reviews = [];
 let notifications = [];
 let tickets = [];
-let cartItems = [];
+let accountCartItems = [];
 let paymentMethods = [];
 let loyaltyData = null;
 let coupons = [];
@@ -65,6 +63,7 @@ function showSection(id) {
     if (id === 'loyalty') loadLoyalty();
     if (id === 'coupons') loadCoupons('available');
     if (id === 'settings') loadSettings();
+    if (id === 'security') loadSecurityData();
 }
 
 // ---- Init ----
@@ -108,7 +107,8 @@ async function loadProfile() {
         loadPaymentMethods(),
         loadLoyalty(),
         loadCoupons('available'),
-        loadSettings()
+        loadSettings(),
+        loadSecurityData()
     ]);
 }
 
@@ -273,7 +273,8 @@ async function loadOrders() {
     try {
         const res = await authFetch(`${API_URL}/orders/my-orders`);
         if (!res.ok) return;
-        orders = await res.json();
+        const data = await res.json();
+        orders = Array.isArray(data) ? data : (data.data || data.orders || data.result || []);
         renderOrders();
         renderRecentOrders();
     } catch(e) { /* ignore */ }
@@ -344,7 +345,7 @@ async function loadWishlist() {
         const res = await authFetch(`${API_URL}/wishlist`);
         if (!res.ok) return;
         const d = await res.json();
-        wishlistItems = d.items || [];
+        accountWishlistItems = d.items || [];
         renderWishlist();
     } catch(e) { /* ignore */ }
 }
@@ -352,14 +353,14 @@ async function loadWishlist() {
 function renderWishlist() {
     const container = $('awList');
     if (!container) return;
-    const items = wishlistItems.slice(0, 4);
+    const items = accountWishlistItems.slice(0, 4);
     if (!items.length) { container.innerHTML = '<p class="acc-text-muted">Your wishlist is empty.</p>'; return; }
     container.innerHTML = `<div class="acc-wishlist-grid">${items.map(item => {
         const p = item.productId;
         if (!p) return '';
-        const img = (p.images && p.images[0]) ? p.images[0] : 'https://placehold.co/200x240/FAF9F6/C8A35A?text=P';
+        const img = (p.images && p.images[0]) ? getImageUrl(p.images[0], 400) : 'https://placehold.co/200x240/FAF9F6/C8A35A?text=P';
         return `<div class="acc-wishlist-item">
-            <img src="${img}" alt="${escHtml(p.name)}" loading="lazy" />
+            <img src="${img}" alt="${escHtml(p.name)}" loading="lazy" width="200" height="240" />
             <div class="acc-wishlist-item-info">
                 <div class="acc-wishlist-item-name">${escHtml(p.name)}</div>
                 <div class="acc-wishlist-item-price">Ksh ${(p.price || 0).toLocaleString()}</div>
@@ -453,13 +454,13 @@ function renderTickets() {
 }
 
 window.viewTicket = function(id) {
-    // Could open a modal or navigate to a detail page
-    window.location.href = `/contact.html?ticket=${id}`;
+    const t = tickets.find(x => x._id === id);
+    window.location.href = `/contact.html?ticket=${encodeURIComponent(t ? (t.ticketId || id) : id)}`;
 };
 
 window.replyToTicket = function(id) {
-    // Could open a modal to reply
-    window.location.href = `/contact.html?reply=${id}`;
+    const t = tickets.find(x => x._id === id);
+    window.location.href = `/contact.html?reply=${encodeURIComponent(t ? (t.ticketId || id) : id)}`;
 };
 
 // ---- Notifications ----
@@ -498,8 +499,7 @@ function renderNotifications() {
 }
 
 function renderNotifPrefs(prefs) {
-    const container = $('anPrefs');
-    if (!container || !prefs) return;
+    if (!prefs) return;
     const items = [
         { key: 'orderUpdates', label: 'Order updates & delivery status' },
         { key: 'promotions', label: 'Promotions & offers' },
@@ -507,9 +507,13 @@ function renderNotifPrefs(prefs) {
         { key: 'priceDrops', label: 'Price drop notifications' },
         { key: 'newsletter', label: 'Newsletter' }
     ];
-    container.innerHTML = items.map(i => `
+    const html = items.map(i => `
         <label><input type="checkbox" ${prefs[i.key] ? 'checked' : ''} data-key="${i.key}" onchange="updateNotifPref(this)" /> ${i.label}</label>
     `).join('');
+    const container = $('anPrefs');
+    if (container) container.innerHTML = html;
+    const settingsContainer = $('anPrefsSettings');
+    if (settingsContainer) settingsContainer.innerHTML = html;
 }
 
 window.markNotifRead = async function(id) {
@@ -590,27 +594,44 @@ $('accProfileForm')?.addEventListener('submit', async (e) => {
 $('apCancelBtn')?.addEventListener('click', () => renderProfile());
 
 // ---- Photo Upload ----
+const CLOUDINARY_CONFIG = {
+    cloudName: 'vbnlibtl',
+    uploadPreset: 'trendy-wardrobe',
+    baseUrl: 'https://res.cloudinary.com/vbnlibtl/image/upload'
+};
+
+async function uploadToCloudinary(file) {
+    const preset = CLOUDINARY_CONFIG.uploadPreset;
+    if (!preset) throw new Error('Cloudinary upload preset not configured');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', preset);
+    const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/image/upload`;
+    const res = await fetch(url, { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'Cloudinary upload failed');
+    return data.secure_url;
+}
+
 $('accPhotoUploadBtn')?.addEventListener('click', () => $('accPhotoInput')?.click());
 $('accPhotoInput')?.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    // Upload to Cloudinary or save as data URL
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-        const dataUrl = ev.target.result;
-        try {
-            const res = await authFetch(`${API_URL}/users/profile`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profilePhoto: dataUrl })
-            });
-            if (!res.ok) throw new Error('Failed');
-            const d = await res.json();
-            profileData = d.data || d;
-            renderProfile();
-            showToast('Photo updated', 'success');
-        } catch(err) { showToast('Could not update photo', 'error'); }
-    };
-    reader.readAsDataURL(file);
+    try {
+        const photoUrl = await uploadToCloudinary(file);
+        const res = await authFetch(`${API_URL}/users/profile`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ profilePhoto: photoUrl })
+        });
+        if (!res.ok) throw new Error('Failed');
+        const d = await res.json();
+        profileData = d.data || d;
+        localStorage.setItem('user', JSON.stringify(profileData));
+        renderProfile();
+        showToast('Photo updated', 'success');
+    } catch(err) {
+        showToast(err.message === 'Cloudinary upload preset not configured' ? 'Photo upload unavailable' : 'Could not update photo', 'error');
+    }
 });
 
 // ---- Password Change ----
@@ -686,6 +707,7 @@ $('asDelForm')?.addEventListener('submit', async (e) => {
 
 // ---- Setup Forms ----
 function setupForms() {
+    // Wire form listeners (defined at top-level below)
 }
 
 // ---- Navigation Setup ----
@@ -727,11 +749,6 @@ function setupNavigation() {
     });
 }
 
-// ---- Setup Forms ----
-function setupForms() {
-    loadRecentlyViewed();
-}
-
 // ============================================================
 // SHOPPING CART
 // ============================================================
@@ -740,7 +757,7 @@ async function loadCart() {
         const res = await authFetch(`${API_URL}/cart`);
         if (!res.ok) return;
         const d = await res.json();
-        cartItems = d.items || d.data?.items || [];
+        accountCartItems = d.items || d.data?.items || [];
         renderCart();
     } catch(e) { /* ignore */ }
 }
@@ -748,19 +765,19 @@ async function loadCart() {
 function renderCart() {
     const container = $('acList');
     if (!container) return;
-    if (!cartItems.length) {
+    if (!accountCartItems.length) {
         container.innerHTML = '<p class="acc-text-muted">Your cart is empty. <a href="/" style="color:var(--color-gold);">Continue shopping</a></p>';
         return;
     }
-    container.innerHTML = cartItems.map(item => {
+    container.innerHTML = accountCartItems.map(item => {
         const p = item.productId;
         if (!p) return '';
-        const img = (p.images && p.images[0]) ? p.images[0] : 'https://placehold.co/200x240/FAF9F6/C8A35A?text=P';
+        const img = (p.images && p.images[0]) ? getImageUrl(p.images[0], 200) : 'https://placehold.co/200x240/FAF9F6/C8A35A?text=P';
         const price = p.price || 0;
         const originalPrice = p.originalPrice || price;
         const discount = originalPrice > price ? Math.round((1 - price/originalPrice) * 100) : 0;
         return `<div class="acc-cart-item" style="display:flex;gap:16px;padding:16px;background:#fff;border:1px solid var(--border-light);border-radius:12px;margin-bottom:12px;align-items:center;">
-            <img src="${img}" alt="${escHtml(p.name)}" style="width:80px;height:100px;object-fit:cover;border-radius:8px;" loading="lazy" />
+            <img src="${img}" alt="${escHtml(p.name)}" style="width:80px;height:100px;object-fit:cover;border-radius:8px;" loading="lazy" width="80" height="100" />
             <div style="flex:1;">
                 <div style="font-weight:600;font-size:0.9rem;">${escHtml(p.name)}</div>
                 <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:4px;">Color: ${escHtml(item.color || 'N/A')} | Size: ${escHtml(item.size || 'N/A')}</div>
@@ -805,7 +822,7 @@ window.removeFromCart = async function(itemId) {
 
 window.moveToWishlist = async function(itemId) {
     try {
-        const item = cartItems.find(i => i._id === itemId);
+        const item = accountCartItems.find(i => i._id === itemId);
         if (!item) return;
         await authFetch(`${API_URL}/wishlist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: item.productId }) });
         await removeFromCart(itemId);
@@ -910,7 +927,7 @@ function renderLoyalty() {
     const data = loyaltyData.data;
     
     // Tier info
-    $('accTierIcon').innerHTML = `<i class="fas ${data.tierIcon || 'fa-crown'}" style="font-size:2rem;"></i>`;
+    $('accTierIcon').innerHTML = `<i class="fas ${escHtml(data.tierIcon || 'fa-crown')}" style="font-size:2rem;"></i>`;
     $('accTierName').textContent = data.tierName || data.currentTier || 'Bronze';
     if (data.nextTier) {
         $('accTierPoints').textContent = `${data.currentPoints?.toLocaleString() || 0} / ${data.nextTier.minPoints?.toLocaleString() || 0} points to ${data.nextTier.name || 'next tier'}`;
@@ -967,7 +984,7 @@ function renderAvailableRewards(rewards) {
     
     container.innerHTML = rewards.map(r => `
         <div class="acc-reward-card" style="display:flex;gap:16px;padding:16px;background:#fff;border:1px solid var(--border-light);border-radius:12px;margin-bottom:12px;position:relative;">
-            ${r.image ? `<img src="${r.image}" alt="" style="width:80px;height:80px;object-fit:cover;border-radius:8px;" loading="lazy" />` : ''}
+            ${r.image ? `<img src="${getImageUrl(r.image, 200)}" alt="" style="width:80px;height:80px;object-fit:cover;border-radius:8px;" loading="lazy" width="80" height="80" />` : ''}
             <div style="flex:1;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
                     <div>
@@ -1124,13 +1141,14 @@ async function loadCoupons(tab = 'available') {
     try {
         const res = await authFetch(`${API_URL}/users/coupons?status=${tab}`);
         if (!res.ok) return;
-        coupons = await res.json();
+        const d = await res.json();
+        coupons = d.data || (Array.isArray(d) ? d : []);
         renderCoupons(tab);
     } catch(e) { /* ignore */ }
 }
 
 function renderCoupons(tab) {
-    const container = $('acList');
+    const container = $('acCouponList');
     if (!container) return;
     const filtered = coupons.filter(c => {
         const now = new Date();
@@ -1217,7 +1235,11 @@ async function loadSettings() {
             const pd = await prefRes.json();
             renderNotifPrefs(pd.data || pd);
         }
+    } catch(e) { /* ignore */ }
+}
 
+async function loadSecurityData() {
+    try {
         // Load login history
         const histRes = await authFetch(`${API_URL}/users/login-history`);
         if (histRes.ok) {
@@ -1328,7 +1350,7 @@ window.verify2FACode = async function() {
         if (!res.ok) throw new Error('Invalid code');
         showToast('2FA enabled successfully!', 'success');
         document.querySelector('.acc-overlay')?.remove();
-        await loadSettings();
+        await loadSecurityData();
     } catch(e) { showToast(e.message, 'error'); }
 };
 
@@ -1338,7 +1360,7 @@ $('accDisable2faBtn')?.addEventListener('click', async () => {
         const res = await authFetch(`${API_URL}/users/2fa/disable`, { method: 'POST' });
         if (!res.ok) throw new Error('Failed');
         showToast('2FA disabled', 'info');
-        await loadSettings();
+        await loadSecurityData();
     } catch(e) { showToast(e.message, 'error'); }
 });
 
@@ -1368,17 +1390,9 @@ $('#downloadDataBtn')?.addEventListener('click', async () => {
     } catch(e) { showToast('Could not download data', 'error'); }
 });
 
-$('#deleteAllDataBtn')?.addEventListener('click', async () => {
-    if (!confirm('This will permanently delete ALL your data. This cannot be undone. Type "DELETE" to confirm:')) return;
-    const confirmText = prompt('Type DELETE to confirm:');
-    if (confirmText !== 'DELETE') { showToast('Confirmation failed', 'error'); return; }
-    try {
-        const res = await authFetch(`${API_URL}/users/account`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: '', confirmDelete: true }) });
-        if (!res.ok) throw new Error('Failed');
-        clearAuth();
-        showToast('Account and all data deleted', 'info');
-        window.location.href = '/';
-    } catch(e) { showToast(e.message, 'error'); }
+$('#deleteAllDataBtn')?.addEventListener('click', () => {
+    showSection('security');
+    $('asDeleteBtn')?.click();
 });
 
 // Privacy checkboxes
